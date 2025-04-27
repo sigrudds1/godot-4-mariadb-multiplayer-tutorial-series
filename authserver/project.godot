@@ -10,6 +10,13 @@ config_version=5
 
 [application]
 
-config/name="AuthServer"
+config/name="AuthServer Tutorial"
+run/main_scene="uid://dinunw68qfhny"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+CFG="*res://Scripts/Autoloads/aCFG.gd"
+DB="*res://Scripts/Autoloads/aDB.gd"
+TimeLapse="*res://Scripts/Autoloads/aTimeLapse.gd"
