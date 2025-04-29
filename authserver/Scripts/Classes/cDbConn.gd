@@ -12,12 +12,12 @@ var _last_active_msec: int
 
 func _notification(p_what: int) -> void:
 	if p_what == NOTIFICATION_PREDELETE:
-		print("p_what == NOTIFICATION_PREDELETE")
-		_db_conn.disconnect_db()
+		if _db_conn != null:
+			_db_conn.disconnect_db()
 
 
 func _init(p_ctx: MariaDBConnectContext) -> void:
-	print(self, ": initialized")
+	#print(self, ": initialized")
 	_db_conn = MariaDBConnector.connection_instance(p_ctx)
 	if _db_conn == null:
 		queue_free()
@@ -32,11 +32,11 @@ func _init(p_ctx: MariaDBConnectContext) -> void:
 
 func do_tasks(p_tasks: Array[DbTask]) -> void:
 	_busy = true
-	print(p_tasks)
+	#print(p_tasks)
 	
 	_last_active_msec = Time.get_ticks_msec()
 	for task:DbTask in p_tasks:
-		print("task stmt:", task.stmt)
+		#print("task stmt:", task.stmt)
 		if task.type == DbTask.Types.SELECT:
 			_do_query(task)
 		else:
@@ -72,7 +72,7 @@ func _do_query(p_task: DbTask) -> void:
 
 func _set_issued(p_state: bool) -> void:
 	issued = p_state
-	print(self, ":  issued:", issued)
+	#print(self, ":  issued:", issued)
 	if issued:
 		call_deferred("_watch_issued_timeout")
 
@@ -95,4 +95,3 @@ func _watch_issued_timeout() -> void:
 			queue_free()
 		else:
 			call_deferred("_watch_issued_timeout")
-	print("left _watch_issued_timeout")

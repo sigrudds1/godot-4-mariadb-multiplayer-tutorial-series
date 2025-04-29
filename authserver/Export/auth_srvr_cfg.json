@@ -6,7 +6,7 @@
 	"db_max_conns": 50,
 	"db_name": "AuthSrvrTemplate",
 	"db_port": 3306,
-	"db_url": "192.168.2.240",
+	"db_url": "localhost",
 	"db_user": "auth_server_user",
 	"gw_listen_port": 60100,
 	"gw_max_conns": 1000,
