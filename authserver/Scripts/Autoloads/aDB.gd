@@ -3,54 +3,156 @@
 #	SHA512, not to	be confused with SHA512/224, SHA512/256, SHA3-512, the MariaDB server user
 #	is configured using ED25519 plugin, see the included AuthSrvrSetup.sql file for installation.
 # The MariaDB addon will except the SHA512 hash because in the steps for authetication via ed25519
-#	it hashes the password via SHA512 in several stages before signing, the first time is just 
+#	it hashes the password via SHA512 in several stages before signing, the first time is just
 #	hashing SHA512, so with the is_prehashed set as true the first hashing is skipped and a safer,
 #	sha512, storage of the password can be kept in a cfg.
 
 # Connection Pooling
-#	For a faster query we will hold a min connection pool to be ready, the pools will be refreshed 
+#	For a faster query we will hold a min connection pool to be ready, the pools will be refreshed
 #		on a given time
 extends Node
 
-signal sConnectionUpdated
+signal sDbConnsChanged
 
-var kConnStaleTicks: int = 600000 
-var kBufferConns: int = 2
+enum eStmtType {
+	COMMAND = 1,
+	SELECT
+}
+enum eStmtID{
+	QRY_PLYR_BY_EMAIL,
+	QRY_PLYR_BY_PLYR_ID,
+	QRY_CHK_IF_PLYR,
+	CMD_INSERT_PLYR,
+	CMD_UPDATE_PLYR_LOGIN,
+}
 
-var is_ready: bool = false
+const kConnStaleTicks: int = 600000
+const kBufferConns: int = 2
+
+var prepared_statements: Dictionary = {
+	eStmtID.QRY_PLYR_BY_EMAIL: {eStmtType.SELECT: "SELECT plyr_id, status, argon2_hash, " + 
+		"argon2_salt, login_attempts, prime_gw_id, display_name, connected_gmsrvr_id," +
+		" (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(login_dt)) AS time_diff" +
+		" FROM player_acct WHERE email = ?;"},
+	eStmtID.QRY_PLYR_BY_PLYR_ID: {eStmtType.SELECT: "SELECT * FROM player_acct WHERE plyr_id = ?;"},
+	eStmtID.QRY_CHK_IF_PLYR: {eStmtType.SELECT:
+		"SELECT email, display_name FROM player_acct WHERE email = ? OR display_name = ?;"},
+	eStmtID.CMD_INSERT_PLYR: {eStmtType.COMMAND: "INSERT INTO player_acct SET status=?, email=?, " +
+		"display_name=?, argon2_hash=?, argon2_salt=?, prime_gw_id=?;"},
+	eStmtID.CMD_UPDATE_PLYR_LOGIN: {eStmtType.COMMAND: "UPDATE player_acct SET status=?, " +
+		"login_dt=now(), login_attempts=? WHERE plyr_id=?;"},
+}: set = _set_prepared_statements
 
 var _db_ctx := MariaDBConnectContext.new()
 var _max_db_conns: int = 0
-var _db_conns: Array[DbConn] = []
-var _db_conn_buffer_mutex := Mutex.new()
-
+var _db_conn_bfr: Array[DbConn] = []
+var _db_conn_bfr_mutex := Mutex.new()
+var _db_conn_issued_bfr: Array[DbConn] = []
+var _db_conn_issued_bfr_mutex := Mutex.new()
+var _srvr_wait: bool = true
 
 func _ready() -> void:
-	CFG.sCFG_Changed.connect(_change_cfg)
+	if CFG.sCFG_Changed.connect(_change_cfg) != OK:
+		pass
 	#_setup_db_ctx()
-	TimeLapse.sMinuteLapsed.connect(_check_conns)
+	if TimeLapse.sMinuteLapsed.connect(_check_conns) != OK:
+		pass
+	if sDbConnsChanged.connect(_check_conns) != OK:
+		pass
 
 
-func get_db_conn() -> DbConn:
-	_db_conn_buffer_mutex.lock()
-	var db_conn: DbConn
-	for conn:DbConn in _db_conns:
-		if conn.issued == false:
-			db_conn = conn
-			conn.issued = true
-			break
-	_db_conn_buffer_mutex.unlock()
-	sConnectionUpdated.emit()
+func get_db_conn_thread_only() -> DbConn:
+	var db_conn: DbConn = null
+	while _srvr_wait:
+		# Only call inside a thread or it will block main thread, use await inside main thread
+		OS.delay_msec(10) 
+		return db_conn
+	
+	_db_conn_bfr_mutex.lock()
+	if _db_conn_bfr.size() > 0:
+		db_conn = _db_conn_bfr.pop_back()
+	_db_conn_bfr_mutex.unlock()
+
+	if db_conn != null:
+		_db_conn_issued_bfr_mutex.lock()
+		_db_conn_issued_bfr.push_back(db_conn)
+		_db_conn_issued_bfr_mutex.unlock()
+		db_conn.issued = true
+	DB.call_deferred("emit_signal", "sDbConnsChanged")
+
 	return db_conn
 
 
 func _change_cfg() -> void:
+	_srvr_wait = true
 	_setup_db_ctx()
-	_check_conns()
-	sConnectionUpdated.connect(_check_conns)
-	
-	is_ready = true
+	_db_conn_bfr_mutex.lock()
+	_db_conn_issued_bfr_mutex.lock()
+	for conn:DbConn in _db_conn_bfr:
+		conn.queue_free()
+	for conn:DbConn in _db_conn_issued_bfr:
+		conn.queue_free()
+	_db_conn_bfr_mutex.unlock()
+	_db_conn_issued_bfr_mutex.unlock()
 
+	await get_tree().create_timer(0.1).timeout
+	_srvr_wait = false
+	sDbConnsChanged.emit()
+
+
+# Only run with signals so it will only run when ready and not block main loop
+func _check_conns() -> void:
+	_db_conn_bfr_mutex.lock()
+	for i in range(_db_conn_bfr.size() - 1, -1, -1):
+		var conn: DbConn = _db_conn_bfr[i]
+		if conn == null:
+			_db_conn_bfr.remove_at(i)
+	var dbconns: int = _db_conn_bfr.size()
+	_db_conn_bfr_mutex.unlock()
+
+	_db_conn_issued_bfr_mutex.lock()
+	for i in range(_db_conn_issued_bfr.size() - 1, -1, -1):
+		var conn: DbConn = _db_conn_issued_bfr[i]
+		if conn == null:
+			_db_conn_issued_bfr.remove_at(i)
+		elif not conn.issued:
+			_db_conn_bfr_mutex.lock()
+			_db_conn_issued_bfr.remove_at(i)
+			_db_conn_bfr.push_back(conn)
+			_db_conn_bfr_mutex.unlock()
+	
+	var busy_dbconns: int = _db_conn_issued_bfr.size()
+	_db_conn_issued_bfr_mutex.unlock()
+
+	if dbconns > kBufferConns:
+		_db_conn_bfr_mutex.lock()
+		var conn: DbConn = _db_conn_bfr.pop_back()
+		conn.queue_free()
+		_db_conn_bfr_mutex.unlock()
+
+	var break_msec: int = Time.get_ticks_msec() + 1000
+	while (_max_db_conns > dbconns + busy_dbconns and
+			dbconns < kBufferConns and
+			Time.get_ticks_msec() < break_msec):
+		var db_conn := DbConn.new(_db_ctx)
+		# Every DB connection needs the prepared statements as they are not shared
+		for glb_id:int in prepared_statements.keys():
+			var stmt_d: Dictionary =  prepared_statements[glb_id]
+			var stmt: String = stmt_d.values()[0]
+			db_conn.add_prepared_stmt(glb_id, stmt)
+			#db_conn.issued = false
+		if db_conn != null:
+			_db_conn_bfr_mutex.lock()
+			_db_conn_bfr.push_back(db_conn)
+			_db_conn_bfr_mutex.unlock()
+			dbconns += 1
+			break_msec = Time.get_ticks_msec() + 1000
+	#print(_check_conns,
+		#" _db_conn_bfr.size():",
+		#_db_conn_bfr.size(),
+		#" _db_conn_issued_bfr.size():",
+		#_db_conn_issued_bfr.size())
+	
 
 func _setup_db_ctx() -> void:
 	_db_ctx.hostname = CFG.data["db_url"]
@@ -64,25 +166,6 @@ func _setup_db_ctx() -> void:
 	#_db_ctx.encoding = MariaDBConnectContext.ENCODE_BASE64 # default
 
 
-func _check_conns() -> void:
-	_db_conn_buffer_mutex.lock()
-	
-	var conns_unissued: int = 0
-	for i in range(_db_conns.size() - 1, -1, -1):
-		var conn: DbConn = _db_conns[i]
-		if not is_instance_valid(conn):
-			_db_conns.remove_at(i)
-		elif not conn.issued:
-			if conns_unissued >= kBufferConns:
-				_db_conns.remove_at(i)
-			else:
-				conns_unissued += 1
-	
-	var conns_available: int =  _max_db_conns - _db_conns.size()
-	while conns_available > 0 and conns_unissued < kBufferConns:
-		var  db_conn := DbConn.new(_db_ctx)
-		_db_conns.push_back(db_conn)
-		conns_unissued += 1
-		conns_available -= 1
-	
-	_db_conn_buffer_mutex.unlock()
+func _set_prepared_statements(_val: Dictionary) -> void:
+	print("_set_prepared_statements")
+	#prepared_statements = p_val

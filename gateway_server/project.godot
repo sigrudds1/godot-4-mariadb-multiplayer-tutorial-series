@@ -10,14 +10,13 @@ config_version=5
 
 [application]
 
-config/name="AuthServer Tutorial"
-run/main_scene="uid://dinunw68qfhny"
+config/name="Gateway Server"
+run/main_scene="uid://dy5c6pblm0x6w"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-CFG="*res://Scripts/Autoloads/aCFG.gd"
-DB="*res://Scripts/Autoloads/aDB.gd"
-TimeLapse="*res://Scripts/Autoloads/aTimeLapse.gd"
-Sanitize="*res://Scripts/Autoloads/aSanitize.gd"
+CFG="*res://Scripts/Autoload/aCFG.gd"
+Sanitize="*res://Scripts/Autoload/aSanitize.gd"
+TimeLapse="*res://Scripts/Autoload/aTimeLapse.gd"

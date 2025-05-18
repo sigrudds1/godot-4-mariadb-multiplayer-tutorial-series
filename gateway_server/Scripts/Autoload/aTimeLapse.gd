@@ -1,8 +1,6 @@
 extends Node
 
 signal sSecondLapsed
-signal sFiveSecondsLapsed
-signal sTenSecondsLapsed
 signal sMinuteLapsed
 signal sTenMinuteLapsed
 
@@ -18,11 +16,7 @@ func _physics_process(p_delta: float) -> void:
 		_secs += 1
 		sSecondLapsed.emit()
 		_lapsed -= 1.0
-		if _secs % 5 == 0:
-			sFiveSecondsLapsed.emit()
-		if _secs % 10 == 0:
-			sTenSecondsLapsed.emit()
-		
+	
 		if _secs >= 60:
 			sMinuteLapsed.emit()
 			_secs -= 60
