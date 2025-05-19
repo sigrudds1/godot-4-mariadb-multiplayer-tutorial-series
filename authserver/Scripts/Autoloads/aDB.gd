@@ -65,7 +65,7 @@ func get_db_conn_thread_only() -> DbConn:
 	var db_conn: DbConn = null
 	while _srvr_wait:
 		# Only call inside a thread or it will block main thread, use await inside main thread
-		OS.delay_msec(10) 
+		OS.delay_msec(17)
 		return db_conn
 	
 	_db_conn_bfr_mutex.lock()

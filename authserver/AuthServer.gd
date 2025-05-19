@@ -89,6 +89,7 @@ func _change_cfg() -> void:
 func _chk_incomming() -> void:
 	if _tcp_srvr.is_connection_available():
 		var tcp_peer: StreamPeerTCP = _tcp_srvr.take_connection()
+		tcp_peer.set_no_delay(true)
 		#print("tcp_peer", tcp_peer)
 		if _tcp_active_conns < CFG.data["gw_max_conns"]:
 			var thr: Thread = Thread.new()
@@ -199,7 +200,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(10)
+		OS.delay_msec(17)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:
@@ -250,7 +251,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	
 	timeout_ms = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(10)
+		OS.delay_msec(17)
 		db_conn = DB.get_db_conn_thread_only()
 	if db_conn != null:
 		db_conn.do_tasks(tasks)
@@ -268,7 +269,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	var last_insert_id: int = qr.res["last_insert_id"]
 	p_peer.put_u32(last_insert_id)
 	
-	OS.delay_msec(100)
+	OS.delay_msec(17)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
@@ -300,7 +301,7 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(10)
+		OS.delay_msec(17)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:
@@ -350,7 +351,7 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	p_peer.put_u32(plyr_id)
 	var displayname: String = row["display_name"]
 	p_peer.put_utf8_string(displayname)
-	OS.delay_msec(100)
+	OS.delay_msec(17)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
@@ -361,9 +362,7 @@ func _put_error_to_stream_and_quit(p_peer:StreamPeerTCP, p_error_code:int) -> vo
 		return
 	# Maybe put in extra logging info like IP, account info, etc.
 	p_peer.put_16(p_error_code)
-	if p_peer.poll() != OK:
-		pass
-	OS.delay_msec(100)
+	OS.delay_msec(17)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
@@ -390,7 +389,7 @@ func _update_plyr_login(p_qr: QueryResult, p_status: int,
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(10)
+		OS.delay_msec(17)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:

@@ -1,11 +1,11 @@
 class_name DbTask extends RefCounted
 
-var stmt_glb_id: DB.eStmt
+var stmt_glb_id: DB.eStmtID
 var params: Array[Dictionary]
 var success_func: Callable
 var fail_func: Callable
 
-func _init(	p_stmt_id: DB.eStmt,
+func _init(	p_stmt_id: DB.eStmtID,
 			p_parmas: Array[Dictionary],
 			p_success_func := Callable(),
 			p_fail_func := Callable()) -> void:
