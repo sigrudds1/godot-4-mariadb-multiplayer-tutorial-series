@@ -183,7 +183,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	
 	var tasks: Array[DbTask] = []
 	var task := DbTask.new(
-		DB.eStmt.QRY_CHK_IF_PLYR,
+		DB.eStmtID.QRY_CHK_IF_PLYR,
 		params,
 		func(p_res: Array[Dictionary]) -> void:
 			qr.rows = p_res, # You need a global container inside lambdas
@@ -235,7 +235,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	]
 	
 	task = DbTask.new(
-		DB.eStmt.CMD_INSERT_PLYR,
+		DB.eStmtID.CMD_INSERT_PLYR,
 		params,
 		func(p_res: Dictionary) -> void:
 			qr.res = p_res, # You need a global container inside lambdas
@@ -284,7 +284,7 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	
 	var tasks: Array[DbTask] = []
 	var task: DbTask = DbTask.new(
-		DB.eStmt.QRY_PLYR_BY_EMAIL,
+		DB.eStmtID.QRY_PLYR_BY_EMAIL,
 		params,
 		func(p_res: Array[Dictionary]) -> void:
 			qr.rows = p_res, # You need a global container inside lambdas
@@ -372,7 +372,7 @@ func _update_plyr_login(p_qr: QueryResult, p_status: int,
 		{MariaDBConnector.FT_INT_U: p_plyr_id},
 	]
 	var task := DbTask.new(
-		DB.eStmt.CMD_UPDATE_PLYR_LOGIN,
+		DB.eStmtID.CMD_UPDATE_PLYR_LOGIN,
 		params,
 		func(p_res: Dictionary) -> void:
 			p_qr.res = p_res,
