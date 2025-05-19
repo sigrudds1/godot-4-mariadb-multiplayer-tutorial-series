@@ -104,14 +104,6 @@ func _chk_incomming() -> void:
 			tcp_peer = NetTool.tcp_disconnect(tcp_peer)
 
 
-func _dispatch_call(p_code: int, p_peer: StreamPeerTCP) -> void:
-	var cb: Callable = _dispatcher.get(p_code, null)
-	if cb.is_valid():
-		cb.callv([p_peer])
-	else:
-		p_peer.put_16(-ERR_DOES_NOT_EXIST)
-
-
 func _srvr_start() -> void:
 	if !CFG.data.has_all(CFG.kCfgJsonKeys):
 		return
@@ -142,8 +134,11 @@ func _tcp_thread(p_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	
 	if NetTool.tcp_is_conn(p_peer) and avail_bytes > 3:
 		var func_code: int = p_peer.get_u16()
-		_dispatch_call(func_code, p_peer)
-		#call_deferred("_dispatch_call", func_code, p_peer)
+		var cb: Callable = _dispatcher.get(func_code, null)
+		if cb.is_valid():
+			cb.callv([p_peer])
+		else:
+			p_peer.put_16(-ERR_DOES_NOT_EXIST)
 	
 	call_deferred("_tcp_thread_stop", p_this_thread)
 

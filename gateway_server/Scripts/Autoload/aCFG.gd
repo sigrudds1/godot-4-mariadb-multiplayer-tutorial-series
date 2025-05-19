@@ -11,17 +11,18 @@ const kSSLCertPath: String = "x509Cert/test.crt"
 const kMaxGameServers: int = 8
 const kUpdateTime: float = 10.0
 
-const kCfgTemplate: Dictionary = {
-	"auth_server_url": "192.168.2.230",
-	"auth_server_port": 60100,
-	"auth_max_conns": 1000,
-	"listen_port": 61000,
-	"max_conns": 1000,
-	"backend_listen_port": 61100,
-	"cmd_listen_port": 61200,
-	"game_servers_baseport": 62000,
-	"server_id": 1
-}
+const kCfgJsonKeys: Array = [
+	"auth_server_url",
+	"auth_server_port",
+	"auth_max_conns",
+	"gw_listen_port",
+	"gw_max_conns",
+	"backend_listen_port",
+	"cmd_listen_port",
+	"game_servers_baseport",
+	"server_id"
+]
+
 
 # @export variables
 # public variables
@@ -65,7 +66,8 @@ func _get_cfg() -> void:
 		exe_dir = OS.get_executable_path().get_base_dir() + "/"
 	_cfg_path = exe_dir + "gw_srvr_cfg.json"
 	var new_cfg: Dictionary = FileTool.load_json(_cfg_path)
-	if !new_cfg.has_all(kCfgTemplate.keys()):
+	if !new_cfg.has_all(kCfgJsonKeys):
+		printerr("CFG File missing keys!")
 		return
 	data = new_cfg.duplicate(true)
 	if cfg_hash != data.hash():
@@ -79,6 +81,7 @@ func _get_tls_opts() -> void:
 	var ssl_key: CryptoKey = load(exe_dir + kSSLKeyPath)
 	var ssl_crt: X509Certificate = load(exe_dir + kSSLCertPath)
 	tls_server_opts = TLSOptions.server(ssl_key, ssl_crt)
-#	tls_client_opt = TLSOptions.client_unsafe(ssl_crt) # testing with self signed
+
+#	tls_client_opts = TLSOptions.client_unsafe(ssl_crt) # testing with self signed
 
 # signal methods
