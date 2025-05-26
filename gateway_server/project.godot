@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Gateway Server"
+config/name="Multiplayer Tutorial Gateway Server"
 run/main_scene="uid://dy5c6pblm0x6w"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"

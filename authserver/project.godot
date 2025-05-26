@@ -10,9 +10,10 @@ config_version=5
 
 [application]
 
-config/name="AuthServer Tutorial"
+config/name="Multiplayer Tutorial Authentication Server"
 run/main_scene="uid://dinunw68qfhny"
 config/features=PackedStringArray("4.4", "Forward Plus")
+run/flush_stdout_on_print=true
 config/icon="res://icon.svg"
 
 [autoload]

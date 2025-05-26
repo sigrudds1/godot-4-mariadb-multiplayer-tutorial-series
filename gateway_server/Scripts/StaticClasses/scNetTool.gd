@@ -1,35 +1,37 @@
 # "res://Scripts/StaticClasses/scNetTool.gd"
 class_name NetTool extends Node
 
-static func ssl_connect(p_tcp_peer: StreamPeerTCP, p_timeout: int = 2000) -> StreamPeerTLS:
-	var ssl_peer := StreamPeerTLS.new()
-	var err = ssl_peer.connect_to_stream(p_tcp_peer, "", CFG.tls_client_opt)
+static func tls_client_connect(p_tcp_peer: StreamPeerTCP, p_timeout: int = 2000) -> StreamPeerTLS:
+	var tls_peer := StreamPeerTLS.new()
+	var err = tls_peer.connect_to_stream(p_tcp_peer, "", CFG.tls_client_opt)
 	if err:
-		print("ssl connection error:", err)
-		ssl_peer = null
-		return ssl_peer
+		printerr("TLS connection error:", err)
+		tls_peer = null
+		return tls_peer
 
 	var conn_timeout:int = Time.get_ticks_msec() + p_timeout
-	while (ssl_peer.get_status() == StreamPeerTLS.STATUS_HANDSHAKING &&
+	while (tls_peer.get_status() == StreamPeerTLS.STATUS_HANDSHAKING &&
 		Time.get_ticks_msec() < conn_timeout && err == 0):
-		ssl_peer.poll()
+		tls_peer.poll()
 
-	if (ssl_peer.get_status() == StreamPeerTLS.STATUS_HANDSHAKING ||
-			ssl_peer.get_status() != StreamPeerTLS.STATUS_CONNECTED && err == 0):
-		print("SSL Not Completing Handshake")
-		ssl_peer = null
+	if (tls_peer.get_status() == StreamPeerTLS.STATUS_HANDSHAKING ||
+			tls_peer.get_status() != StreamPeerTLS.STATUS_CONNECTED && err == 0):
+		printerr("TLS Not Completing Handshake")
+		tls_peer = null
 
-	return ssl_peer
+	return tls_peer
 
 
-static func ssl_disconnect(p_peer: StreamPeerTLS) -> StreamPeerTLS:
-	if ssl_is_conn(p_peer):
+static func tls_disconnect(p_peer: StreamPeerTLS) -> StreamPeerTLS:
+	if p_peer == null:
+		return p_peer
+	if tls_is_connected(p_peer):
 		p_peer.disconnect_from_stream()
 	p_peer = null
 	return p_peer
 
 
-static func ssl_is_conn(p_peer: StreamPeerTLS) -> bool:
+static func tls_is_connected(p_peer: StreamPeerTLS) -> bool:
 	if p_peer == null:
 		return false
 	return p_peer.get_status() == StreamPeerTLS.STATUS_CONNECTED

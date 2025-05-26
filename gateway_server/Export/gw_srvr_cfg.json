@@ -6,6 +6,9 @@
 	"gw_max_conns": 1000,
 	"backend_listen_port": 61100,
 	"cmd_listen_port": 61200,
-	"game_servers_baseport": 62000,
+	"game_server_url": "localhost",
+	"game_server_port": 62001,
+	"game_server_backend_url": "localhost",
+	"game_server_backend_port": 62101,
 	"server_id": 1
 }

@@ -19,7 +19,10 @@ const kCfgJsonKeys: Array = [
 	"gw_max_conns",
 	"backend_listen_port",
 	"cmd_listen_port",
-	"game_servers_baseport",
+	"game_server_backend_url",
+	"game_server_backend_port",
+	"game_server_url",
+	"game_server_port",
 	"server_id"
 ]
 

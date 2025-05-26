@@ -33,7 +33,14 @@ enum eFuncCode{
 	RESET_PASSWORD
 }
 
-var _dispatcher: Dictionary = {
+const kConnTimout: int = 2000
+const kLockoutTime: int = 900
+const kLoginAttemptsLockout: int = 3
+const kLoopDelay: = 17
+const kTcpFlushDelay: int = 50
+
+
+var _func_code_func_lookup: Dictionary = {
 	eFuncCode.LOGIN:           Callable(self, "_handle_login"),
 	eFuncCode.CHANGE_PASSWORD: Callable(self, "_handle_change_password"),
 	eFuncCode.CONNECT_PLYR:    Callable(self, "_handle_change_status"),
@@ -41,10 +48,6 @@ var _dispatcher: Dictionary = {
 	eFuncCode.CREATE_ACCOUNT:  Callable(self, "_handle_create_account"),
 	eFuncCode.RESET_PASSWORD:  Callable(self, "_handle_reset_password"),
 }
-
-const kConnTimout: int = 2000
-const kLoginAttemptsLockout: int = 3
-const kLockoutTime: int = 900
 
 var _tcp_srvr: TCPServer
 var _tcp_port: int
@@ -134,7 +137,8 @@ func _tcp_thread(p_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	
 	if NetTool.tcp_is_conn(p_peer) and avail_bytes > 3:
 		var func_code: int = p_peer.get_u16()
-		var cb: Callable = _dispatcher.get(func_code, null)
+		# FuncCode dispatching, faster than if-elif and match tree
+		var cb: Callable = _func_code_func_lookup.get(func_code, null)
 		if cb.is_valid():
 			cb.callv([p_peer])
 		else:
@@ -195,7 +199,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(17)
+		OS.delay_msec(kLoopDelay)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:
@@ -246,11 +250,12 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	
 	timeout_ms = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(17)
+		OS.delay_msec(kLoopDelay)
 		db_conn = DB.get_db_conn_thread_only()
 	if db_conn != null:
 		db_conn.do_tasks(tasks)
 		db_conn.issued = false
+		db_conn = null
 	else:
 		_put_error_to_stream_and_quit(p_peer, -ERR_BUSY)
 		return
@@ -264,11 +269,13 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	var last_insert_id: int = qr.res["last_insert_id"]
 	p_peer.put_u32(last_insert_id)
 	
-	OS.delay_msec(17)
+	OS.delay_msec(kTcpFlushDelay)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
 func _handle_login(p_peer: StreamPeerTCP) -> void:
+	print("_handle_login")
+	var start_tm: int = Time.get_ticks_usec()
 	# read username  (email)
 	var email: String = p_peer.get_utf8_string()
 	#print("email:", email)
@@ -296,7 +303,7 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(17)
+		OS.delay_msec(kLoopDelay)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:
@@ -306,6 +313,9 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	else:
 		_put_error_to_stream_and_quit(p_peer, -ERR_BUSY)
 		return
+	
+	print("time:", Time.get_ticks_usec() - start_tm)
+	
 	if qr.err != OK:
 		_put_error_to_stream_and_quit(p_peer, -qr.err)
 		return
@@ -342,11 +352,13 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 		return
 	else:
 		_update_plyr_login(qr, 0, 0, plyr_id)
-	#print( "after pswd check",  Time.get_ticks_msec())
+	
+	p_peer.put_16(eDbReply.LOGIN_SUCCESS)
 	p_peer.put_u32(plyr_id)
 	var displayname: String = row["display_name"]
 	p_peer.put_utf8_string(displayname)
-	OS.delay_msec(17)
+	# wait for bfr flush, may wnat to increase this if expecting high letency clients
+	OS.delay_msec(kTcpFlushDelay)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
@@ -357,7 +369,8 @@ func _put_error_to_stream_and_quit(p_peer:StreamPeerTCP, p_error_code:int) -> vo
 		return
 	# Maybe put in extra logging info like IP, account info, etc.
 	p_peer.put_16(p_error_code)
-	OS.delay_msec(17)
+	# wait for bfr flush, may wnat to increase this if expecting high letency clients
+	OS.delay_msec(kTcpFlushDelay)
 	p_peer = NetTool.tcp_disconnect(p_peer)
 
 
@@ -384,7 +397,7 @@ func _update_plyr_login(p_qr: QueryResult, p_status: int,
 	var db_conn: DbConn = DB.get_db_conn_thread_only()
 	var timeout_ms: int = Time.get_ticks_msec() + kConnTimout
 	while db_conn == null and Time.get_ticks_msec() < timeout_ms:
-		OS.delay_msec(17)
+		OS.delay_msec(kLoopDelay)
 		db_conn = DB.get_db_conn_thread_only()
 	
 	if db_conn != null:
