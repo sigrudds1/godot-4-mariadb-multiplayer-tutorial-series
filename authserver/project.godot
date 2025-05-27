@@ -15,7 +15,7 @@ run/main_scene="uid://dinunw68qfhny"
 config/features=PackedStringArray("4.4", "Forward Plus")
 run/flush_stdout_on_print=true
 config/icon="res://icon.svg"
-config/tags=PackedStringArray("tutorial")
+config/tags=PackedStringArray("multiplayer", "tutorial")
 
 [autoload]
 
