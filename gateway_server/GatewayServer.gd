@@ -195,8 +195,8 @@ func _change_cfg() -> void:
 	_srvr_start()
 	_stop = false
 	
-	_test_create_acct()
-	_test_login()
+	#_test_create_acct()
+	#_test_login()
 	
 	#var thr := Thread.new()
 	#if thr.start(_test_login_thread.bind(thr)) != OK:
