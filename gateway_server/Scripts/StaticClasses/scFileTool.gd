@@ -16,7 +16,7 @@ static func directory_check(p_path: String, p_create: bool = false) -> int:
 	return err
 
 
-static func load_json(p_path: String) -> Dictionary:
+static func json_load(p_path: String) -> Dictionary:
 	var d: Dictionary = {}
 	var f := FileAccess.open(p_path, FileAccess.READ)
 	if f != null:
@@ -32,14 +32,14 @@ static func load_json(p_path: String) -> Dictionary:
 	return d
 
 
-static func save_json(p_path: String, p_data: Dictionary, p_create_folder: bool = false) -> int:
+static func json_save(p_path: String, p_data: Dictionary, p_create_folder: bool = false) -> int:
 	var e: int = directory_check(p_path, p_create_folder)
 	if e != OK:
 		return e
 
 	var f := FileAccess.open(p_path, FileAccess.WRITE)
 	if f == null:
-		print("Error FileTool.save_json cannot open file", p_path)
+		print("Error FileTool.json_save cannot open file", p_path)
 	f.store_string(JSON.stringify(p_data))
 	f.close()
 	return OK

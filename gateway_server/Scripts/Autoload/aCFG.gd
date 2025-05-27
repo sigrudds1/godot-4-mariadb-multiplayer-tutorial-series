@@ -68,7 +68,7 @@ func _get_cfg() -> void:
 	if !OS.has_feature("editor"):
 		exe_dir = OS.get_executable_path().get_base_dir() + "/"
 	_cfg_path = exe_dir + "gw_srvr_cfg.json"
-	var new_cfg: Dictionary = FileTool.load_json(_cfg_path)
+	var new_cfg: Dictionary = FileTool.json_load(_cfg_path)
 	if !new_cfg.has_all(kCfgJsonKeys):
 		printerr("CFG File missing keys!")
 		return
