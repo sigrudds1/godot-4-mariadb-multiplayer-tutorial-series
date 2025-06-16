@@ -1,0 +1,14 @@
+{
+	"auth_server_url": "localhost",
+	"auth_server_port": 60100,
+	"auth_max_conns": 1000,
+	"gw_listen_port": 61000,
+	"gw_max_conns": 1000,
+	"backend_listen_port": 61100,
+	"cmd_listen_port": 61200,
+	"game_server_url": "192.168.2.240",
+	"game_server_port": 62001,
+	"game_server_backend_url": "localhost",
+	"game_server_backend_port": 62101,
+	"server_id": 1
+}

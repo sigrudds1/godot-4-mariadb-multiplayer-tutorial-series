@@ -1,0 +1,1 @@
+git diff --name-only 00b3012e3ff7e830a3cc2a537dd208310c32109d 391ee5be36a7e4cbba73d007ea69c568d788754d | grep -vE '\.uid$|\.import/|\.godot$'

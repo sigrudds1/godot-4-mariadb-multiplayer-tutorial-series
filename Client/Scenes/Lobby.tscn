@@ -1,0 +1,171 @@
+[gd_scene load_steps=4 format=3 uid="uid://dpy6vmi0e7p5l"]
+
+[ext_resource type="Script" uid="uid://bxy5mixds3g7x" path="res://Scenes/Lobby.gd" id="1_bpe3w"]
+[ext_resource type="PackedScene" uid="uid://cx0wfv2cof6gt" path="res://Scenes/BlockledPlyrLine.tscn" id="2_lolwk"]
+[ext_resource type="Texture2D" uid="uid://ykode3bwq8qf" path="res://Assets/Images/UI/button_rectangleRedClose.png" id="2_wgubu"]
+
+[node name="Lobby" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_bpe3w")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Inventory_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inventory"
+
+[node name="Options_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Options"
+
+[node name="Quit_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Quit"
+
+[node name="Messages_scroll" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Messages_vbc" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Messages_scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+alignment = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Send_msg_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+text = "Send"
+
+[node name="BlockedPlayerList_panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="BlockedPlayerList_panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="BlockedPlayerList_panel/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Blocked Players"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BlockedPlyr_box" type="VBoxContainer" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+alignment = 2
+
+[node name="BlockedPlyrLine" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer/ScrollContainer/BlockedPlyr_box" instance=ExtResource("2_lolwk")]
+layout_mode = 2
+
+[node name="BlockedPlayerListClose_tbtn" type="TextureButton" parent="BlockedPlayerList_panel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("2_wgubu")
+texture_pressed = ExtResource("2_wgubu")
+texture_hover = ExtResource("2_wgubu")
+texture_disabled = ExtResource("2_wgubu")
+texture_focused = ExtResource("2_wgubu")
+
+[node name="BlockReportPlyr_panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="BlockReportPlyr_panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Panel" type="PanelContainer" parent="BlockReportPlyr_panel/MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="BlockReportPlyr_panel/MarginContainer/Panel"]
+layout_mode = 2
+
+[node name="BlockReportPlayerName_label" type="Label" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player Name"
+horizontal_alignment = 1
+
+[node name="AddBlockedPlyr_btn" type="Button" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Block"
+
+[node name="ReportPlyr_btn" type="Button" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Report"
+
+[node name="BlockReportPlyrClose_tbtn" type="TextureButton" parent="BlockReportPlyr_panel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("2_wgubu")
+texture_pressed = ExtResource("2_wgubu")
+texture_hover = ExtResource("2_wgubu")
+texture_disabled = ExtResource("2_wgubu")
+texture_focused = ExtResource("2_wgubu")
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/Options_btn" to="." method="_on_options_btn_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/Quit_btn" to="." method="_on_quit_btn_pressed"]
+[connection signal="text_submitted" from="MarginContainer/VBoxContainer/HBoxContainer2/LineEdit" to="." method="_on_line_edit_text_submitted"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer2/Send_msg_btn" to="." method="_on_send_msg_btn_pressed"]
+[connection signal="pressed" from="BlockedPlayerList_panel/BlockedPlayerListClose_tbtn" to="." method="_on_blocked_player_list_close_tbtn_pressed"]
+[connection signal="pressed" from="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer/AddBlockedPlyr_btn" to="." method="_on_add_blocked_plyr_btn_pressed"]
+[connection signal="pressed" from="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer/ReportPlyr_btn" to="." method="_on_report_plyr_btn_pressed"]
+[connection signal="pressed" from="BlockReportPlyr_panel/BlockReportPlyrClose_tbtn" to="." method="_on_block_report_plyr_close_tbtn_pressed"]

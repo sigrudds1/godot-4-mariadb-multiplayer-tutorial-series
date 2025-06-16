@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://cx0wfv2cof6gt"]
+
+[ext_resource type="Texture2D" uid="uid://bb7unvuo3hbx8" path="res://Assets/Images/UI/button_metalClose.png" id="1_diy2b"]
+[ext_resource type="Script" uid="uid://cfbjomfdcppe6" path="res://Scenes/BlockledPlyrLine.gd" id="1_eniao"]
+
+[node name="BlockedPlyrLine" type="HBoxContainer"]
+offset_right = 125.0
+offset_bottom = 24.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_eniao")
+
+[node name="Remove_btn" type="TextureButton" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+texture_normal = ExtResource("1_diy2b")
+texture_pressed = ExtResource("1_diy2b")
+texture_hover = ExtResource("1_diy2b")
+stretch_mode = 5
+
+[node name="PlyrName_label" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "player name yadayadayadayadayada"
+vertical_alignment = 1
+
+[connection signal="pressed" from="Remove_btn" to="." method="_on_remove_btn_pressed"]

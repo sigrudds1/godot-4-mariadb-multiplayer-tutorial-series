@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://bycql6njeqcu8"]
+
+[ext_resource type="Script" uid="uid://d200odnnnofln" path="res://Scenes/MessageLine.gd" id="1_snf61"]
+
+[node name="MessageLine" type="PanelContainer"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -92.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_snf61")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="PlyrName_btn" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player Name"
+
+[node name="Message_rtl" type="RichTextLabel" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Some really long text to test multiline wordwrap. blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blahblah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blahblah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blahblah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah "
+fit_content = true
+scroll_active = false
+vertical_alignment = 1
+
+[connection signal="pressed" from="HBoxContainer/PlyrName_btn" to="." method="_on_plyr_name_btn_pressed"]

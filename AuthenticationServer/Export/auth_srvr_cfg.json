@@ -1,0 +1,13 @@
+{
+	"cmd_listen_port": 60200,
+	"db_pwd_plain": "secret",
+	"db_pwd_sha512": "bd2b1aaf7ef4f09be9f52ce2d8d599674d81aa9d6a4421696dc4d93dd0619d682ce56b4d64a9ef097761ced99e0f67265b5f76085e5b0ee7ca4696b2ad6fe2b2",
+	"db_pwd_sha512_to_b64": "vSsar3708Jvp9Szi2NWZZ02Bqp1qRCFpbcTZPdBhnWgs5WtNZKnvCXdhztmeD2cmW192CF5bDufKRpayrW/isg==",
+	"db_max_conns": 5,
+	"db_name": "AuthSrvrTemplate",
+	"db_port": 3306,
+	"db_url": "localhost",
+	"db_user": "auth_server_user",
+	"gw_listen_port": 60100,
+	"gw_max_conns": 1000,
+}

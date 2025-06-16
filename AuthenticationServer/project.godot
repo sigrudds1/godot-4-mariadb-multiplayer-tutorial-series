@@ -1,0 +1,25 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Multiplayer Tutorial Authentication Server"
+config/tags=PackedStringArray("multiplayer", "tutorial")
+run/main_scene="uid://dinunw68qfhny"
+config/features=PackedStringArray("4.4", "Forward Plus")
+run/flush_stdout_on_print=true
+config/icon="res://icon.svg"
+
+[autoload]
+
+CFG="*res://Scripts/Autoloads/aCFG.gd"
+DB="*res://Scripts/Autoloads/aDB.gd"
+TimeLapse="*res://Scripts/Autoloads/aTimeLapse.gd"
+Sanitize="*res://Scripts/Autoloads/aSanitize.gd"

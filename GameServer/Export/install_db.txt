@@ -1,0 +1,8 @@
+**Warniung this will delete the data in an existing GameSrvrSetup database
+
+Inside this folder run, remember I set the root password as supersecret, 
+	use the password you set when prompted.
+
+mariadb -u root -p < ./GameSrvrSetup.sql
+
+
