@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Client Template"
-config/tags=PackedStringArray("multiplayer")
+config/name="Multiplayer Tutorial  Client"
+config/tags=PackedStringArray("multiplayer", "tutorial")
 run/main_scene="uid://bwsiy15hwt66y"
 config/features=PackedStringArray("4.4", "Mobile")
 config/icon="res://icon.svg"

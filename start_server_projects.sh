@@ -5,22 +5,31 @@ error=0
 srvr_name=$2
 
 GODOT_BIN="$HOME/dev/GodotEngine-Builds/Godot_v4.4.1-stable_linux.x86_64"
+help() {
+	echo "Usage:"
+	echo "start_servers_projects.sh help"
+	echo "start_servers_projects.sh start {authsrvr|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh stop {authsrvr|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh restart {authsrvr|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh {startall|stopall|restartall}"
+}
 
 start(){
 	case "$srvr_name" in
 		authsrvr)
 			echo "Starting Authentication Server"
-			cd ~/dev/repos/Godot4Projects/Godot4-Mulitplayer-Server-Templates/AuthServerTemplate
+			
+			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/AuthenticationServer
 			screen -dmS authsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
 		gmsrvr)
 			echo "Starting Game Server"
-			cd ~/dev/repos/Godot4Projects/Godot4-Mulitplayer-Server-Templates/GameServerTemplate
+			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/GameServer
 			screen -dmS gmsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
 		gwsrvr)
 			echo "Starting Gateway Server"
-			cd ~/dev/repos/Godot4Projects/Godot4-Mulitplayer-Server-Templates/GatewayServerTemplate
+			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/GatewayServer
 			screen -dmS gwsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
 		*)
@@ -84,10 +93,7 @@ case "$1" in
 		done
 	    ;;
 	help)
-		echo "~~HELP~~"
-		echo "Game Server needs to be started with an id, this is used in the start up "
-		echo "Examples - typed command are in <command>"
-		echo -e "\t <start all --id=1> Starts all servers with the gameserver as id 1 "
+		help
 	    ;;
 	status)
 		echo "status func not completed"
@@ -102,12 +108,13 @@ case "$1" in
         for session_name in gwsrvr gmsrvr authsrvr; do
 			srvr_name=$session_name
 			stop
-			sleep 1
 		done
+		
+		sleep 1
+		
 		for session_name in authsrvr gwsrvr gmsrvr; do
 			srvr_name=$session_name
 			start
-			sleep 1
 		done
 		;;
 	*)
@@ -115,10 +122,6 @@ case "$1" in
         ;;
 esac
 if [[ "$error" == 1 ]]; then
-	echo "Usage:"
-	echo "start_servers.sh start {authsrvr|gmsrvr|gwsrvr}"
-	echo "start_servers.sh stop {authsrvr|gmsrvr|gwsrvr}"
-	echo "start_servers.sh restart {authsrvr|gmsrvr|gwsrvr}"
-	echo "start_servers.sh {startall|stopall|restartall|help}"
+	help
 fi
 exit $error
