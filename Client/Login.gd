@@ -150,6 +150,8 @@ func _tls_thread(p_this_thread: Thread) -> void:
 					msg = "Account Locked Contact Support."
 				eReply.LOGIN_ATTEMPT_EXCEEDED:
 					msg = "Failed Login Attempts Exceeded Try Back in 15 Minutes."
+				eReply.NOT_EXIST:
+					msg = "Account does not exist, please register!"
 				eReply.LOGIN_FAIL:
 					msg = "Login Failed Check Username and Password."
 				_:
