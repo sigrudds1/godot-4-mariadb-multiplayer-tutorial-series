@@ -39,19 +39,22 @@ static func tls_is_connected(p_peer: StreamPeerTLS) -> bool:
 
 
 static func tcp_connect(p_url: String, p_port: int, p_timeout: int = 2000) -> StreamPeerTCP:
-	var tcp_peer := StreamPeerTCP.new()
+	var tcp_peer: StreamPeerTCP = StreamPeerTCP.new()
 	var err: int = tcp_peer.connect_to_host(p_url, p_port)
-	if err :
+	if err:
 		print(p_url, ":", p_port, " tcp connection error:", err)
 
 	var conn_timeout: int = Time.get_ticks_msec() + p_timeout
-	while (err == OK &&
-			tcp_peer.get_status() == StreamPeerTCP.STATUS_CONNECTING &&
-			Time.get_ticks_msec() < conn_timeout):
+	while (
+		err == OK &&
+		tcp_peer.get_status() == StreamPeerTCP.STATUS_CONNECTING &&
+		Time.get_ticks_msec() < conn_timeout
+	):
 		tcp_peer.poll()
 
 	if (err || tcp_peer.get_status() == StreamPeerTCP.STATUS_CONNECTING ||
-			tcp_peer.get_status() != StreamPeerTCP.STATUS_CONNECTED):
+		tcp_peer.get_status() != StreamPeerTCP.STATUS_CONNECTED
+	):
 		print(p_url, ":", p_port, " cannot connect to host")
 		err = ERR_CANT_CONNECT
 
@@ -76,7 +79,7 @@ static func tcp_is_connected(p_tcp_peer: StreamPeerTCP) -> bool:
 
 
 static func tcp_srvr_create(p_port: int, p_bind_addr: String = "*") -> TCPServer:
-	var tcp_srvr := TCPServer.new()
+	var tcp_srvr: TCPServer = TCPServer.new()
 	if tcp_srvr.listen(p_port, p_bind_addr) != OK:
 		tcp_srvr = null
 	return tcp_srvr

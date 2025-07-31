@@ -67,10 +67,10 @@ func do_tasks(p_tasks: Array[DbTask]) -> void:
 			if DB.prepared_statements.has(task.stmt_glb_id):
 				var stmt_d: Dictionary = DB.prepared_statements[task.stmt_glb_id]
 				if not stmt_d.is_empty():
-					var stmt_type: DB.eStmtType = stmt_d.keys()[0]
-					if stmt_type == DB.eStmtType.SELECT:
+					var stmt_type: DB.StmtType = stmt_d.keys()[0]
+					if stmt_type == DB.StmtType.SELECT:
 						_do_query(task)
-					elif stmt_type == DB.eStmtType.COMMAND:
+					elif stmt_type == DB.StmtType.COMMAND:
 						_do_cmd(task)
 		else:
 			printerr("DbPrep", self, "Missing Global STMT ID:", task.stmt_glb_id)

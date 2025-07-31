@@ -6,27 +6,28 @@ signal sPlayerSentMsg(plyr_display_name: String, msg: String)
 @onready var _main_node: Node = get_node("/root/Main")
 
 
-func _block_plyer_thread(p_plyr_node: Player,
+func _block_plyer_thread(
+		p_plyr_node: Player,
 		p_blocked_display_name: String,
 		p_do_block: bool,
-		p_this_thread: Thread) -> void:
+		p_this_thread: Thread
+	) -> void:
 	
 	var blocked_plyr_idx: int = p_plyr_node.msg_blocked_plyrs.find(p_blocked_display_name)
+	var stmt_id: int = -1
+	if p_do_block:
+		stmt_id = DB.StmtIDs.CMD_INSERT_MSG_BLOCK
+		if blocked_plyr_idx == -1:
+			p_plyr_node.msg_blocked_plyrs.push_back(p_blocked_display_name)
+	else:
+		stmt_id = DB.StmtIDs.CMD_DELETE_MSG_BLOCK
+		if blocked_plyr_idx > -1:
+			p_plyr_node.msg_blocked_plyrs.remove_at(blocked_plyr_idx)
 	
 	var sql_params:  Array[Dictionary] = [
 		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id},
 		{MariaDBConnector.FT_VARCHAR: p_blocked_display_name}
 	]
-	
-	var stmt_id: int = -1
-	if p_do_block:
-		stmt_id = DB.eStmtID.CMD_INSERT_MSG_BLOCK
-		if blocked_plyr_idx == -1:
-			p_plyr_node.msg_blocked_plyrs.push_back(p_blocked_display_name)
-	else:
-		stmt_id = DB.eStmtID.CMD_DELETE_MSG_BLOCK
-		if blocked_plyr_idx > -1:
-			p_plyr_node.msg_blocked_plyrs.remove_at(blocked_plyr_idx)
 	
 	var qr: QueryResult = QueryResult.new()
 	var task: DbTask = DbTask.new(
@@ -39,10 +40,11 @@ func _block_plyer_thread(p_plyr_node: Player,
 	)
 	
 	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
-	var db_conn: DbConn = DB.get_db_conn_thread_only()
+	var db_conn: DbConn = DB.get_db_conn()
 	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
-		OS.delay_msec(DB.kThreadLoopDelay)
-		db_conn = DB.get_db_conn_thread_only()
+		# Only call inside a thread or it will block main thread, use await inside main thread
+		OS.delay_msec(DB.kThreadLoopDelay) 
+		db_conn = DB.get_db_conn()
 	
 	if db_conn == null:
 		pass # TODO handle error
@@ -51,11 +53,7 @@ func _block_plyer_thread(p_plyr_node: Player,
 		db_conn.issued = false
 		db_conn = null
 	
-	call_deferred("_thread_stop", p_this_thread)
-
-
-func _thread_stop(p_thread: Thread) -> void:
-	Utils.thread_wait_stop(p_thread)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 @rpc("any_peer", "reliable")

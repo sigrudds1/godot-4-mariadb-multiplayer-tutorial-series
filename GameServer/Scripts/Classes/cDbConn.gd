@@ -2,7 +2,9 @@ class_name DbConn extends Node
 
 const kConnStaleTicks: int = 600000
 const kForgotMsec: int = 5000 # 5 sec
+
 var issued: bool = false: set = _set_issued
+var last_error: int = 0
 
 var _busy: bool = false
 var _ctx: MariaDBConnectContext
@@ -25,7 +27,7 @@ func _init(p_ctx: MariaDBConnectContext) -> void:
 		queue_free()
 		return
 	#print("DbConn", self, ": initialized")
-
+	
 	_ctx = p_ctx
 	_last_active_msec = Time.get_ticks_msec()
 	
@@ -49,21 +51,26 @@ func add_prepared_stmt(p_glb_id: int, p_stmt: String, p_overwrite:bool = false) 
 				if !_prep_stmts.erase(p_glb_id):
 					printerr("%s failed to remove prepared glb_stmt_id %d"% [str(self), p_glb_id])
 					return
-
+	
 	var status: Dictionary = _db_conn.prep_stmt(p_stmt)
 	if _db_conn.last_error != MariaDBConnector.ErrorCode.OK:
 		printerr("%s unable to add prepared statement with ErrorCode: %d!" % [
 			self, _db_conn.last_error])
 		return
-
+	
 	_prep_stmts[p_glb_id] = status["statement_id"]
 
 
-func _connect_signal() -> void:
-	# More efficient then timers, coupling ok since TimeLapse is an autoload
-	var error: int = TimeLapse.sFiveSecondsLapsed.connect(_update_connection)
-	if error:
-		printerr(self, "Can not connect to TimeLapse.sFiveSecondsLapsed")
+func do_cmd(p_stmt: String) -> Dictionary:
+	var result: Dictionary = _db_conn.execute_command(p_stmt)
+	last_error = _db_conn.last_error
+	return result
+
+
+func do_query(p_stmt: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = _db_conn.select_query(p_stmt)
+	last_error = _db_conn.last_error
+	return result
 
 
 func do_tasks(p_tasks: Array[DbTask]) -> void:
@@ -74,15 +81,22 @@ func do_tasks(p_tasks: Array[DbTask]) -> void:
 			if DB.prepared_statements.has(task.stmt_glb_id):
 				var stmt_d: Dictionary = DB.prepared_statements[task.stmt_glb_id]
 				if not stmt_d.is_empty():
-					var stmt_type: DB.eStmtType = stmt_d.keys()[0]
-					if stmt_type == DB.eStmtType.SELECT:
+					var stmt_type: DB.StmtTypes = stmt_d.keys()[0]
+					if stmt_type == DB.StmtTypes.SELECT:
 						_do_query(task)
-					elif stmt_type == DB.eStmtType.COMMAND:
+					elif stmt_type == DB.StmtTypes.COMMAND:
 						_do_cmd(task)
 		else:
 			printerr("DbPrep", self, "Missing Global STMT ID:", task.stmt_glb_id)
 	_busy = false
 	_last_active_msec = Time.get_ticks_msec()
+
+
+func _connect_signal() -> void:
+	# More efficient then timers, coupling ok since TimeLapse is an autoload
+	var error: int = TimeLapse.sFiveSecondsLapsed.connect(_update_connection)
+	if error:
+		printerr(self, "Can not connect to TimeLapse.sFiveSecondsLapsed")
 
 
 func _do_callable(callable: Callable, arg: Variant = null) -> void:
@@ -113,8 +127,8 @@ func _do_query(p_task: DbTask) -> void:
 		_do_callable(p_task.fail_func, _db_conn.last_error)
 
 
-func _set_issued(p: bool) -> void:
-	issued = p
+func _set_issued(p_issued: bool) -> void:
+	issued = p_issued
 	DB.call_deferred("emit_signal", "sDbConnsChanged")
 
 

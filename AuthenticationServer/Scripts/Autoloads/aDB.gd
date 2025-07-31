@@ -1,4 +1,3 @@
-
 # "res://Scripts/Autoload/aDB.gd"
 # NOTE - See the auth_srvr_cfg.json, this examples db plain password is "secret" and is hashed with
 #	SHA512, not to	be confused with SHA512/224, SHA512/256, SHA3-512, the MariaDB server user
@@ -15,11 +14,11 @@ extends Node
 
 signal sDbConnsChanged
 
-enum eStmtType {
+enum StmtType {
 	COMMAND = 1,
 	SELECT
 }
-enum eStmtID{
+enum StmtID{
 	QRY_PLYR_BY_EMAIL,
 	QRY_PLYR_BY_PLYR_ID,
 	QRY_CHK_IF_PLYR,
@@ -31,16 +30,16 @@ const kConnStaleTicks: int = 600000
 const kBufferConns: int = 2
 
 var prepared_statements: Dictionary = {
-	eStmtID.QRY_PLYR_BY_EMAIL: {eStmtType.SELECT: "SELECT plyr_id, status, argon2_hash, " + 
+	StmtID.QRY_PLYR_BY_EMAIL: {StmtType.SELECT: "SELECT plyr_id, status, argon2_hash, " + 
 		"argon2_salt, login_attempts, prime_gw_id, display_name, connected_gmsrvr_id," +
 		" (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(login_dt)) AS time_diff" +
 		" FROM player_acct WHERE email = ?;"},
-	eStmtID.QRY_PLYR_BY_PLYR_ID: {eStmtType.SELECT: "SELECT * FROM player_acct WHERE plyr_id = ?;"},
-	eStmtID.QRY_CHK_IF_PLYR: {eStmtType.SELECT:
+	StmtID.QRY_PLYR_BY_PLYR_ID: {StmtType.SELECT: "SELECT * FROM player_acct WHERE plyr_id = ?;"},
+	StmtID.QRY_CHK_IF_PLYR: {StmtType.SELECT:
 		"SELECT email, display_name FROM player_acct WHERE email = ? OR display_name = ?;"},
-	eStmtID.CMD_INSERT_PLYR: {eStmtType.COMMAND: "INSERT INTO player_acct SET status=?, email=?, " +
+	StmtID.CMD_INSERT_PLYR: {StmtType.COMMAND: "INSERT INTO player_acct SET status=?, email=?, " +
 		"display_name=?, argon2_hash=?, argon2_salt=?, prime_gw_id=?;"},
-	eStmtID.CMD_UPDATE_PLYR_LOGIN: {eStmtType.COMMAND: "UPDATE player_acct SET status=?, " +
+	StmtID.CMD_UPDATE_PLYR_LOGIN: {StmtType.COMMAND: "UPDATE player_acct SET status=?, " +
 		"login_dt=now(), login_attempts=? WHERE plyr_id=?;"},
 }: set = _set_prepared_statements
 
@@ -50,13 +49,13 @@ var _db_conn_bfr: Array[DbConn] = []
 var _db_conn_bfr_mutex: Mutex = Mutex.new()
 var _db_conn_issued_bfr: Array[DbConn] = []
 var _db_conn_issued_bfr_mutex: Mutex = Mutex.new()
-var _srvr_wait: bool = true
+var _srvr_cfg_change: bool = true
 var _srvr_running: bool = true
 var _check_db_conns_sema: Semaphore = Semaphore.new()
 var _check_db_conns_thread: Thread = Thread.new()
 
 func _ready() -> void:
-	if CFG.sCFG_Changed.connect(_change_cfg) != OK:
+	if CFG.sCfgChanged.connect(_change_cfg) != OK:
 		pass
 	#_setup_db_ctx()
 	if TimeLapse.sMinuteLapsed.connect(_on_check_db_conns) != OK:
@@ -77,28 +76,27 @@ func _exit_tree() -> void:
 
 func get_db_conn_thread_only() -> DbConn:
 	var db_conn: DbConn = null
-	while _srvr_wait:
-		# Only call inside a thread or it will block main thread, use await inside main thread
+	while _srvr_cfg_change:
+		# Only call OS.delay_msec inside a thread or it will block main thread, use await in main
 		OS.delay_msec(17)
-		return db_conn
 	
 	_db_conn_bfr_mutex.lock()
 	if _db_conn_bfr.size() > 0:
 		db_conn = _db_conn_bfr.pop_back()
 	_db_conn_bfr_mutex.unlock()
-
+	
 	if db_conn != null:
 		_db_conn_issued_bfr_mutex.lock()
 		_db_conn_issued_bfr.push_back(db_conn)
 		_db_conn_issued_bfr_mutex.unlock()
 		db_conn.issued = true
 	DB.call_deferred("emit_signal", "sDbConnsChanged")
-
+	
 	return db_conn
 
 
 func _change_cfg() -> void:
-	_srvr_wait = true
+	_srvr_cfg_change = true
 	_setup_db_ctx()
 	_db_conn_bfr_mutex.lock()
 	_db_conn_issued_bfr_mutex.lock()
@@ -108,9 +106,9 @@ func _change_cfg() -> void:
 		conn.queue_free()
 	_db_conn_bfr_mutex.unlock()
 	_db_conn_issued_bfr_mutex.unlock()
-
+	
 	await get_tree().create_timer(0.1).timeout
-	_srvr_wait = false
+	_srvr_cfg_change = false
 	sDbConnsChanged.emit()
 	_test_auth_db()
 
@@ -125,7 +123,7 @@ func _check_conns_thread_func() -> void:
 				_db_conn_bfr.remove_at(i)
 		var dbconns: int = _db_conn_bfr.size()
 		_db_conn_bfr_mutex.unlock()
-
+	
 		_db_conn_issued_bfr_mutex.lock()
 		for i:int in range(_db_conn_issued_bfr.size() - 1, -1, -1):
 			var conn: DbConn = _db_conn_issued_bfr[i]
@@ -139,17 +137,19 @@ func _check_conns_thread_func() -> void:
 		
 		var busy_dbconns: int = _db_conn_issued_bfr.size()
 		_db_conn_issued_bfr_mutex.unlock()
-
+	
 		if dbconns > kBufferConns:
 			_db_conn_bfr_mutex.lock()
 			var conn: DbConn = _db_conn_bfr.pop_back()
 			conn.queue_free()
 			_db_conn_bfr_mutex.unlock()
-
+	
 		var break_msec: int = Time.get_ticks_msec() + 1000
-		while (_max_db_conns > dbconns + busy_dbconns and
-				dbconns < kBufferConns and
-				Time.get_ticks_msec() < break_msec):
+		while (
+			_max_db_conns > dbconns + busy_dbconns and
+			dbconns < kBufferConns and
+			Time.get_ticks_msec() < break_msec
+		):
 			var db_conn: DbConn = DbConn.new(_db_ctx)
 			# Every DB connection needs the prepared statements as they are not shared
 			for glb_id:int in prepared_statements.keys():
@@ -163,7 +163,9 @@ func _check_conns_thread_func() -> void:
 				_db_conn_bfr_mutex.unlock()
 				dbconns += 1
 				break_msec = Time.get_ticks_msec() + 1000
+			OS.delay_msec(17)
 		
+		OS.delay_msec(17)
 		_check_db_conns_sema.wait()
 
 

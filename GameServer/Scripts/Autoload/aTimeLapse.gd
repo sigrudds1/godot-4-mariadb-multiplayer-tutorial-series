@@ -4,9 +4,10 @@ signal sSecondLapsed
 signal sFiveSecondsLapsed
 signal sTenSecondsLapsed
 signal sMinuteLapsed
-signal sTenMinuteLapsed
+signal sFiveMinutesLapsed
+signal sTenMinutesLapsed
 
-const kMaxMinutes: int = 10
+const kMaxMinutes: int = 100
 
 var _lapsed: float = 0.0
 var _secs: int = 0
@@ -28,8 +29,11 @@ func _physics_process(p_delta: float) -> void:
 			_secs -= 60
 			_minutes += 1
 			
+			if _minutes % 5 == 0:
+				sFiveMinutesLapsed.emit()
+			
 			if _minutes % 10 == 0:
-				sTenMinuteLapsed.emit()
+				sTenMinutesLapsed.emit()
 				
 			if _minutes >= kMaxMinutes:
 				_minutes -= kMaxMinutes

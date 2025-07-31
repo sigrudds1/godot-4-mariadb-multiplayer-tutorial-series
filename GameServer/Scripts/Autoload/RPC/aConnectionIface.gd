@@ -6,7 +6,6 @@ const auth_time: float = 10.0
 var awaiting_login: Dictionary ={}
 var plyrs_online: Dictionary = {}
 
-
 var _plyr_scene: PackedScene = preload("res://Scenes/Player.tscn")
 var _enet_port: int
 var _enet_max_conns: int
@@ -17,13 +16,13 @@ var _stop_listening: bool = true
 
 
 func _ready() -> void:
-	if CFG.sChanged.connect(_change_cfg) != OK:
+	if CFG.sCfgChanged.connect(_change_cfg) != OK:
 		pass
 	if multiplayer.peer_connected.connect(_player_connected) != OK:
 		pass
 	if multiplayer.peer_disconnected.connect(_player_disconnected) != OK:
 		pass
-	if TimeLapse.sSecondLapsed.connect(_check_wating) != OK:
+	if TimeLapse.sSecondLapsed.connect(_check_awaiting_login) != OK:
 		pass
 
 
@@ -50,14 +49,14 @@ func _change_cfg() -> void:
 	_stop_listening = false
 
 
-func _check_wating() -> void:
+func _check_awaiting_login() -> void:
 	var thr: Thread = Thread.new()
-	var err_code: Error = thr.start(_check_wating_thread.bind(thr))
+	var err_code: Error = thr.start(_check_awaiting_login_thread.bind(thr))
 	if err_code != OK:
 		printerr("aConnectionIface._check_wating_thread start error code:" + str(err_code))
 
 
-func _check_wating_thread(p_this_thread: Thread) -> void:
+func _check_awaiting_login_thread(p_this_thread: Thread) -> void:
 	for key:String in awaiting_login:
 		var plyr: Dictionary = awaiting_login.get(key)
 		var expires: int = plyr.get("expires", -1)
@@ -66,7 +65,37 @@ func _check_wating_thread(p_this_thread: Thread) -> void:
 			if awaiting_login.erase(key):
 				pass
 		
-	call_deferred("_thread_stop", p_this_thread)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
+
+
+func _match_queue_add_plyr_thread(
+		p_plyr_node: Player,
+		p_side: int, 
+		p_match_type: int, 
+		p_this_thread: Thread
+	) -> void:
+	
+	var stmt_id: DB.StmtIDs = DB.StmtIDs.CMD_INSERT_PLYR_INTO_MATCH
+	var sql_params: Array[Dictionary] = [
+		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id},
+		{MariaDBConnector.FT_TINYINT_U: p_side},
+		{MariaDBConnector.FT_TINYINT_U: p_match_type}
+	]
+	var qr: QueryResult = QueryResult.new()
+	DB.do_threaded_cmd_task(stmt_id, sql_params, qr, p_this_thread)
+
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
+
+
+func _match_queue_remove_plyr_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
+	var stmt_id: DB.StmtIDs = DB.StmtIDs.CMD_DELETE_PLYR_FROM_MATCH
+	var sql_params: Array[Dictionary] = [
+		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id}
+	]
+	var qr: QueryResult = QueryResult.new()
+	DB.do_threaded_cmd_task(stmt_id, sql_params, qr, p_this_thread)
+	
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _player_connected(p_peer_id: int) -> void:
@@ -90,7 +119,7 @@ func _player_disconnected(p_peer_id: int) -> void:
 	var thr: Thread= Thread.new()
 	var err_code: Error = thr.start(_player_disconnected_thread.bind(plyr_node, thr))
 	if err_code != OK:
-		printerr("backend srvr thread start error code:" + str(err_code))
+		printerr("plyr disconnected thread start error, code:" + str(err_code))
 
 
 func _player_disconnected_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
@@ -98,10 +127,9 @@ func _player_disconnected_thread(p_plyr_node: Player, p_this_thread: Thread) -> 
 	var display_name: String = p_plyr_node.display_name
 	if plyrs_online.erase(p_plyr_node.plyr_id):
 		pass
-	p_plyr_node.call_deferred("queue_free")
-	
 	print("Plyr_id:%d, Display Name:%s disconnected!"% [plyr_id, display_name])
-	call_deferred("_thread_stop", p_this_thread)
+	
+	p_plyr_node.remove_player(p_this_thread)
 
 
 func _srvr_start() -> void:
@@ -109,7 +137,7 @@ func _srvr_start() -> void:
 	var error: Error = _enet_srvr.create_server(_enet_port, _enet_max_conns)
 	if error != OK:
 		printerr("Can't create Enet Server with Error:", error)
-		await get_tree().create_timer(1.0).timeout
+		await TimeLapse.sSecondLapsed
 		call_deferred("_change_cfg")
 		return
 	
@@ -117,18 +145,28 @@ func _srvr_start() -> void:
 	print("multiplayer port %d max conns %d" % [_enet_port, _enet_max_conns])
 	
 
-func _thread_stop(p_thread: Thread) -> void:
-	Utils.thread_wait_stop(p_thread)
+@rpc("any_peer", "reliable")
+func client_cancel_match() -> void:
+	var peer_id: int = multiplayer.get_remote_sender_id()
+	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
+	var thr: Thread= Thread.new()
+	var err_code: Error = thr.start(_match_queue_remove_plyr_thread.bind(plyr_node, thr))
+	if err_code != OK:
+		printerr("_match_queue_remove_plyr_thread start error, code:" + str(err_code))
 
 
-@rpc("authority", "reliable")
-func server_validation_status(_code: int) -> void:
-	pass
-
-
-@rpc("authority", "reliable")
-func server_status(_code: int) -> void:
-	pass
+@rpc("any_peer", "reliable")
+func client_request_match(p_side: DataTypes.PlaySides, p_type: DataTypes.MatchTypes ) -> void:
+	if p_side == DataTypes.PlaySides.NONE or p_type == DataTypes.MatchTypes.NONE:
+		return
+	
+	# We still add to the queue even if ONLY_PVE, in case of server overloading
+	var peer_id: int = multiplayer.get_remote_sender_id()
+	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
+	var thr: Thread= Thread.new()
+	var err_code: Error = thr.start(_match_queue_add_plyr_thread.bind(plyr_node, thr))
+	if err_code != OK:
+		printerr("_match_queue_add_plyr_thread start error, code:" + str(err_code))
 
 
 # plyr connect credentials from gateway
@@ -171,3 +209,13 @@ func client_validate_token(p_token: String) -> void:
 	print("plyr validated peer_id:%d info:%s" % [peer_id, str(plyr_info)])
 	print(plyr_node)
 	print(_main_node.get_children())
+
+
+@rpc("authority", "reliable")
+func server_validation_status(_code: int) -> void:
+	pass
+
+
+@rpc("authority", "reliable")
+func server_status(_code: int) -> void:
+	pass

@@ -1,3 +1,4 @@
+# "res://dispatcher_vs_match.gd"
 extends Node3D
 
 enum func_id {
@@ -27,17 +28,14 @@ var _func_dispatch: Dictionary = {
 	func_id.nine:	Callable(self, "_test_callable"),
 }
 
-# Called when the node enters the scene tree for the first time.
 func _ready():
-	#var some_class := TestFree.new()
-	#some_class.queue_free()
 	var start_us: int = Time.get_ticks_usec()
 	for j:int in 100000:
 		for i:int in func_id.last:
 			var cb: Callable = _func_dispatch.get(i, null)
 			if cb.is_valid():
 				cb.call(true)
-	print("time us:", Time.get_ticks_usec() - start_us)
+	print("Using Callable time us:", Time.get_ticks_usec() - start_us)
 	start_us = Time.get_ticks_usec()
 	for j:int in 100000:
 		for i:int in func_id.last:
@@ -64,9 +62,7 @@ func _ready():
 						_test_callable(true)
 					_:
 						_test_callable(true)
-	print("time us:", Time.get_ticks_usec() - start_us)
-	
-	pass
+	print("Using MAtch time us:", Time.get_ticks_usec() - start_us)
 
 
 func _test_callable(p: bool) -> void:

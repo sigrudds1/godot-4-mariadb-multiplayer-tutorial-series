@@ -1,7 +1,7 @@
 # "res://GatewayServer.gd"
 extends Node
 
-enum eDbReply {
+enum DbReply {
 	OK,
 	UNAME_UNAVAILABLE,
 	DNAME_UNAVAILABLE,
@@ -13,7 +13,7 @@ enum eDbReply {
 	LOGIN_FAIL,
 }
 
-enum eAcctStatusBit{
+enum AcctStatusBit{
 	ONLINE = 1,
 	BIT2 = 2,
 	BIT3 = 4,
@@ -24,7 +24,7 @@ enum eAcctStatusBit{
 	LOCKED = 128
 }
 
-enum eFuncCode {
+enum FuncCode {
 	CREATE_ACCOUNT = 1,
 	CHANGE_PASSWORD,
 	CONNECT_PLYR,
@@ -39,23 +39,23 @@ const kLoopDelay: = 17
 const kTcpFlushDelay: int = 50
 
 var _db_reply_func_lookup: Dictionary = {
-	eDbReply.UNAME_UNAVAILABLE:			Callable(self, "_send_tls_peer_code"),
-	eDbReply.DNAME_UNAVAILABLE:			Callable(self, "_send_tls_peer_code"),
-	eDbReply.CREATED:					Callable(self, "_handle_db_login_success"),
-	eDbReply.LOCKED:					Callable(self, "_send_tls_peer_code"),
-	eDbReply.LOGIN_ATTEMPT_EXCEEDED:	Callable(self, "_send_tls_peer_code"),
-	eDbReply.NOT_EXIST:					Callable(self, "_send_tls_peer_code"),
-	eDbReply.LOGIN_SUCCESS:				Callable(self, "_handle_db_login_success"),
-	eDbReply.LOGIN_FAIL:				Callable(self, "_send_tls_peer_code"),
+	DbReply.UNAME_UNAVAILABLE:			Callable(self, "_send_tls_peer_code"),
+	DbReply.DNAME_UNAVAILABLE:			Callable(self, "_send_tls_peer_code"),
+	DbReply.CREATED:					Callable(self, "_handle_db_login_success"),
+	DbReply.LOCKED:					Callable(self, "_send_tls_peer_code"),
+	DbReply.LOGIN_ATTEMPT_EXCEEDED:	Callable(self, "_send_tls_peer_code"),
+	DbReply.NOT_EXIST:					Callable(self, "_send_tls_peer_code"),
+	DbReply.LOGIN_SUCCESS:				Callable(self, "_handle_db_login_success"),
+	DbReply.LOGIN_FAIL:				Callable(self, "_send_tls_peer_code"),
 }
 
 var _func_code_func_lookup: Dictionary = {
-	eFuncCode.CREATE_ACCOUNT:	Callable(self, "_handle_fn_create_account"),
-	#eFuncCode.CHANGE_PASSWORD:	Callable(self, "_dummy_func"),
-	#eFuncCode.CONNECT_PLYR:		Callable(self, "_dummy_func"),
-	#eFuncCode.DISCONNECT_PLYR:	Callable(self, "_dummy_func"),
-	eFuncCode.LOGIN:			Callable(self, "_handle_fn_login"),
-	#eFuncCode.RESET_PASSWORD:	Callable(self, "_dummy_func")
+	FuncCode.CREATE_ACCOUNT:	Callable(self, "_handle_fn_create_account"),
+	#FuncCode.CHANGE_PASSWORD:	Callable(self, "_dummy_func"),
+	#FuncCode.CONNECT_PLYR:		Callable(self, "_dummy_func"),
+	#FuncCode.DISCONNECT_PLYR:	Callable(self, "_dummy_func"),
+	FuncCode.LOGIN:			Callable(self, "_handle_fn_login"),
+	#FuncCode.RESET_PASSWORD:	Callable(self, "_dummy_func")
 }
 
 var _auth_srvr_url: String
@@ -73,7 +73,7 @@ var _stop: bool = false
 
 
 func _ready() -> void:
-	CFG.cfg_changed.connect(_change_cfg)
+	CFG.sChanged.connect(_change_cfg)
 
 
 func _process(_delta: float) -> void:
@@ -126,7 +126,7 @@ func _test_create_acct() -> void:
 	var tcp_peer: StreamPeerTCP = NetTool.tcp_connect(_auth_srvr_url, _auth_srvr_port)
 	if tcp_peer == null:
 		return
-	tcp_peer.put_u16(eFuncCode.CREATE_ACCOUNT)
+	tcp_peer.put_u16(FuncCode.CREATE_ACCOUNT)
 	tcp_peer.put_utf8_string(email)
 	tcp_peer.put_utf8_string(display_name)
 	tcp_peer.put_utf8_string(pswd)
@@ -144,7 +144,7 @@ func _test_login_thread(p_this_thread: Thread = null) -> void:
 		var tcp_peer: StreamPeerTCP = NetTool.tcp_connect(_auth_srvr_url, _auth_srvr_port)
 		if tcp_peer == null:
 			return
-		tcp_peer.put_u16(eFuncCode.LOGIN)
+		tcp_peer.put_u16(FuncCode.LOGIN)
 		tcp_peer.put_utf8_string(email)
 		tcp_peer.put_utf8_string(pswd)
 		
@@ -198,7 +198,7 @@ func _chk_incomming() -> void:
 
 
 func _dummy_func(_plyr_tls_peer: StreamPeerTLS,
-		_code: int = eDbReply.OK, 
+		_code: int = DbReply.OK, 
 		_db_tcp_peer: StreamPeerTCP = null) -> void:
 	return
 
@@ -212,7 +212,7 @@ func _get_auth_srvr_res(p_db_tcp_peer: StreamPeerTCP, p_plyr_tls_peer: StreamPee
 			continue
 		
 		var reply_code: int = p_db_tcp_peer.get_16()
-		if reply_code == eDbReply.OK:
+		if reply_code == DbReply.OK:
 			time_out_ms = Time.get_ticks_msec() + kDataStreamTimeout
 			continue
 		
@@ -225,7 +225,7 @@ func _get_auth_srvr_res(p_db_tcp_peer: StreamPeerTCP, p_plyr_tls_peer: StreamPee
 
 
 func _handle_db_login_success(p_plyr_tls_peer: StreamPeerTLS,
-		p_code: int = eDbReply.OK,
+		p_code: int = DbReply.OK,
 		p_db_tcp_peer: StreamPeerTCP = null) -> void:
 	
 	var plyr_id: int = p_db_tcp_peer.get_u32()
@@ -243,7 +243,7 @@ func _handle_db_login_success(p_plyr_tls_peer: StreamPeerTLS,
 		var a2h := Argon2Hasher.new()
 		var login_hash: String = a2h.generate_b64_salt()
 		
-		gmsrvr_peer.put_16(eFuncCode.CONNECT_PLYR)
+		gmsrvr_peer.put_16(FuncCode.CONNECT_PLYR)
 		gmsrvr_peer.put_u32(plyr_id)
 		gmsrvr_peer.put_utf8_string(display_name)
 		gmsrvr_peer.put_utf8_string(login_hash)
@@ -290,7 +290,7 @@ func _handle_fn_create_account(p_plyr_tls_peer: StreamPeerTLS) -> void:
 		return
 	if not NetTool.tcp_is_connected(tcp_peer):
 		return
-	tcp_peer.put_u16(eFuncCode.CREATE_ACCOUNT)
+	tcp_peer.put_u16(FuncCode.CREATE_ACCOUNT)
 	tcp_peer.put_utf8_string(email)
 	tcp_peer.put_utf8_string(display_name)
 	tcp_peer.put_utf8_string(pswd)
@@ -307,7 +307,7 @@ func _handle_fn_login(p_plyr_tls_peer: StreamPeerTLS) -> void:
 		return
 	if not NetTool.tcp_is_connected(tcp_peer):
 		return
-	tcp_peer.put_u16(eFuncCode.LOGIN)
+	tcp_peer.put_u16(FuncCode.LOGIN)
 	tcp_peer.put_utf8_string(email)
 	tcp_peer.put_utf8_string(pswd)
 	
@@ -317,7 +317,7 @@ func _handle_fn_login(p_plyr_tls_peer: StreamPeerTLS) -> void:
 
 # caveat to using a dispatcher method, all functions need to have the same parameter signature
 func _send_tls_peer_code(p_plyr_tls_peer: StreamPeerTLS,
-		p_code: int = eDbReply.OK,
+		p_code: int = DbReply.OK,
 		_db_tcp_peer: StreamPeerTCP = null) -> void:
 	print("_send_tls_peer_code:", p_code )
 	if p_plyr_tls_peer == null:
@@ -351,7 +351,7 @@ func _tcp_thread(p_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	var tls_err: int =  tls_peer.accept_stream(p_peer, CFG.tls_server_opts)
 	if tls_err != OK:
 		printerr("_tcp_thread TLS err:", tls_err)
-		call_deferred("_tcp_thread_stop", p_this_thread)
+		Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 		return
 	
 	_tls_active_conns += 1
@@ -371,8 +371,4 @@ func _tcp_thread(p_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	
 	tls_peer = NetTool.tls_disconnect(tls_peer)
 	_tls_active_conns -= 1
-	call_deferred("_thread_stop", p_this_thread)
-
-
-func _thread_stop(p_thread: Thread) -> void:
-	Utils.thread_wait_stop(p_thread)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)

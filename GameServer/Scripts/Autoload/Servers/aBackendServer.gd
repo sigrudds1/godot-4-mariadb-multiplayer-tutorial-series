@@ -27,7 +27,7 @@ var _bind_address: String
 
 
 func _ready() -> void:
-	if CFG.sChanged.connect(_change_cfg):
+	if CFG.sCfgChanged.connect(_change_cfg):
 		pass
 
 
@@ -123,6 +123,7 @@ func _tcp_thread(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	while NetTool.tcp_is_conn(p_tcp_peer) and Time.get_ticks_msec() < idle_tm and avail_bytes < 4:
 		avail_bytes = p_tcp_peer.get_available_bytes()
 		if avail_bytes < 2: # need 4 bytes min
+			# Only call inside a thread or it will block main thread, use await inside main thread
 			OS.delay_msec(kTcpFlushDelay)
 			continue
 	
@@ -137,10 +138,8 @@ func _tcp_thread(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 			p_tcp_peer.put_16(-ERR_DOES_NOT_EXIST)
 	
 	_tcp_conns -= 1
+	# Only call inside a thread or it will block main thread, use await inside main thread
 	OS.delay_msec(kTcpFlushDelay)
 	p_tcp_peer = NetTool.tcp_disconnect(p_tcp_peer)
-	call_deferred("_thread_stop", p_this_thread)
-
-
-func _thread_stop(p_thread: Thread) -> void:
-	Utils.thread_wait_stop(p_thread)
+	
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)

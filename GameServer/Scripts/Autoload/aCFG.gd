@@ -1,7 +1,9 @@
 # "res://Scripts/Autoload/Servers/aCFG.gd"
 extends Node
 
-signal sChanged
+signal sCfgChanged
+
+const kServerName: String = "Game Server"
 
 const kJsonCfgFile: String = "game_srvr_cfg.json"
 const kUpdateTime: float = 10.0
@@ -31,7 +33,7 @@ var server_id: int = 1
 
 var _update_tmr: float = kUpdateTime
 
-
+# We will eventually set ip and port in command args, when multiple servers are needed
 func _ready() -> void:
 	var args: Dictionary = {}
 	print("Command line args:", OS.get_cmdline_user_args())
@@ -62,8 +64,8 @@ func _get_cfg() -> void:
 	if new_cfg.has_all(kCfgJsonKeys):
 		if data.hash() != new_cfg.hash():
 			data = new_cfg.duplicate(true)
-			print("server starting")
-			sChanged.emit()
+			print(kServerName, " starting")
+			sCfgChanged.emit()
 	if !data.has_all(kCfgJsonKeys):
-		print("Auth Server Cfg Missing, QUITTING!")
+		print(kServerName, " Cfg Missing, QUITTING!")
 		get_tree().quit(-1)

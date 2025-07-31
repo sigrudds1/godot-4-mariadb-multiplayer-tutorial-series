@@ -1,5 +1,5 @@
 
-#This will work for installation an upgrading
+#This will work for installation and upgrading
 
 sudo apt update
 sudo apt upgrade -y
@@ -33,17 +33,18 @@ sudo mariadb-secure-installation
 	# use defaults
 
 For testing, I comment out the bind address, for production you will want to keep the bind address and/or add more, 
-	this limit possible connection to the DB server so even if someon was to be able to get on the network, they 
-	would still need to use the bind IP
+	this limits possible connections to the DB server so even if someone was to be able to get on the network, they 
+	would still need to use a bind IP
 sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf 
-	#comment out bind-address
-	# to find it 
+	# To find it 
 	<ctrl>w
 	bind-address<enter>
+	# For testing only, comment out bind-address, otherwise add the ip of the server to access the DB, localhost if same machine
 	# Note - as of version 10.11, you can specify more than one bind address, comma-separated
-	#save
-	<ctrl>x
+	
+	# To save
+	<ctrl>x # If you have not modified the file it will just close
 	Y
-	#it will display file name to write
+	# It will display file name to write
 	<enter>
 	

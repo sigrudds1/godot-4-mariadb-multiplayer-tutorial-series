@@ -1,53 +1,78 @@
 # Autoload DataTypes
 extends Node
 
+enum MatchTypes {
+	NONE,
+	ONLY_PVE,
+	ONLY_PVP,
+	TRY_PVP,
+}
+
+enum PlaySides{
+	NONE,
+	ONLY_TANKS,
+	ONLY_TOWERS,
+	PREFER_TANKS,
+	PREFER_TOWERS,
+	ANY
+}
+
+enum PlayerMatchStates {
+	IDLE,
+	WAITING,
+	PLAYING
+}
+
+# THINKING OUTLOUD
 enum TargetingModes{ # Server data key - TM
-	None = -1,
-	Detected = 0,
-	Debuff = 1,
-	Buff = 2,
-	Nearest = 3,
-	LowestHitPoints = 4,
+	NONE,
+	DETECTED,
+	DEBUFF,
+	BUFF,
+	NEAREST,
+	LOWEST_HP
 }
 
 enum DmgTypes{ # Server data key - DT
-	None = -1,
-	Energy,
-	Kinetic,
+	NONE,
+	ENERGY,
+	KINETIC,
 }
 
 enum UnitTypes { # Server data key - UT
-	None = -1,
-	Tank,
-	Tower,
+	NONE,
+	TANK,
+	TOWER
 }
 
 enum TurretTypes{ # Server data key - UST
-	None = -1,
-	Vulcan, # kinetic
-	Missle, # kinetic
-	Railgun, # kinetic
-	Microwave, # Energy
-	Plasma, # Energy
-	Laser, # Energy
+	NONE,
+	VULCAN, # kinetic
+	MISSILE, # kinetic
+	RAILGUN, # kinetic
+	MICROWAVE, # Energy
+	PLASMA, # Energy
+	LASER, # Energy
 }
 
 
 enum ArmotTypes{
-	None = -1,
-	Reactive,
-	BirdCage,
+	NONE,
+	REACTIVE,
+	BIRDCAGE,
+	notdone
 }
 
-enum ServerDataUnitKeys{
-	UnitType = 0,
-	TurretType = 1,
-	DamageType = 2,
-	TargetingMode = 3,
-	DamageAmount = 4,
-	RateOfFire = 5,
-	SensorRange = 6,
-	AttackRange = 7,
-	GridLocation = 8,
-	MoveSpeed = 9,
+enum ServerDataKeys{
+	UNIT_TYPE = 0,
+	TURRET_TYPE = 1,
+	DAMAGE_TYPE = 2,
+	TARGETTING_MODE = 3,
+	DAMAGE_AMOUNT = 4,
+	RATE_OF_FIRE = 5,
+	SENSOR_RANGE = 6,
+	ATTACK_RANGE = 7,
+	GRID_LOCATION = 8,
+	MOVE_SPEED = 9,
+	not_done
 }

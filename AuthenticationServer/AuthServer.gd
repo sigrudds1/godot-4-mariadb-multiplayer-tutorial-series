@@ -1,7 +1,7 @@
 # "res://AuthServer.gd"
 extends Node
 
-enum eDbReply{
+enum DbReply{
 	OK,
 	UNAME_UNAVAILABLE,
 	DNAME_UNAVAILABLE,
@@ -13,7 +13,7 @@ enum eDbReply{
 	LOGIN_FAIL,
 }
 
-enum eAcctStatusBit{
+enum AcctStatusBit{
 	ONLINE = 1,
 	BIT2 = 2,
 	BIT3 = 4,
@@ -24,7 +24,7 @@ enum eAcctStatusBit{
 	LOCKED = 128
 }
 
-enum eFuncCode{
+enum FuncCode{
 	CREATE_ACCOUNT = 1,
 	CHANGE_PASSWORD,
 	CONNECT_PLYR,
@@ -41,12 +41,12 @@ const kTcpFlushDelay: int = 50
 
 
 var _func_code_func_lookup: Dictionary = {
-	eFuncCode.LOGIN:           Callable(self, "_handle_login"),
-	eFuncCode.CHANGE_PASSWORD: Callable(self, "_handle_change_password"),
-	eFuncCode.CONNECT_PLYR:    Callable(self, "_handle_change_status"),
-	eFuncCode.DISCONNECT_PLYR: Callable(self, "_handle_change_status"),
-	eFuncCode.CREATE_ACCOUNT:  Callable(self, "_handle_create_account"),
-	eFuncCode.RESET_PASSWORD:  Callable(self, "_handle_reset_password"),
+	FuncCode.LOGIN:           Callable(self, "_handle_login"),
+	FuncCode.CHANGE_PASSWORD: Callable(self, "_handle_change_password"),
+	FuncCode.CONNECT_PLYR:    Callable(self, "_handle_change_status"),
+	FuncCode.DISCONNECT_PLYR: Callable(self, "_handle_change_status"),
+	FuncCode.CREATE_ACCOUNT:  Callable(self, "_handle_create_account"),
+	FuncCode.RESET_PASSWORD:  Callable(self, "_handle_reset_password"),
 }
 
 var _tcp_srvr: TCPServer
@@ -57,7 +57,7 @@ var _stop: bool = false
 
 
 func _ready() -> void:
-	if CFG.sCFG_Changed.connect(self._change_cfg) != OK:
+	if CFG.sCfgChanged.connect(self._change_cfg) != OK:
 		print_debug("connection failed")
 	
 	#var email: String = "some_email@someplace.nul"
@@ -183,7 +183,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	
 	var tasks: Array[DbTask] = []
 	var task: DbTask = DbTask.new(
-		DB.eStmtID.QRY_CHK_IF_PLYR,
+		DB.StmtID.QRY_CHK_IF_PLYR,
 		params,
 		func(p_res: Array[Dictionary]) -> void:
 			qr.rows = p_res, # You need a global container inside lambdas
@@ -211,10 +211,10 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	
 	if qr.rows.size() > 0:
 		if qr.rows[0]["email"] == email:
-			_put_error_to_stream_and_quit(p_peer, eDbReply.UNAME_UNAVAILABLE)
+			_put_error_to_stream_and_quit(p_peer, DbReply.UNAME_UNAVAILABLE)
 			return
 		if qr.rows[0]["display_name"] == displayname:
-			_put_error_to_stream_and_quit(p_peer, eDbReply.DNAME_UNAVAILABLE)
+			_put_error_to_stream_and_quit(p_peer, DbReply.DNAME_UNAVAILABLE)
 			return
 		_put_error_to_stream_and_quit(p_peer, -ERR_DUPLICATE_SYMBOL)
 		return
@@ -226,7 +226,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	qr.err = OK
 	
 	params = [
-		{MariaDBConnector.FT_TINYINT_U: eAcctStatusBit.ONLINE},
+		{MariaDBConnector.FT_TINYINT_U: AcctStatusBit.ONLINE},
 		{MariaDBConnector.FT_VARCHAR: email},
 		{MariaDBConnector.FT_VARCHAR: displayname},
 		{MariaDBConnector.FT_VARCHAR: pswd_hash},
@@ -235,7 +235,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 	]
 	
 	task = DbTask.new(
-		DB.eStmtID.CMD_INSERT_PLYR,
+		DB.StmtID.CMD_INSERT_PLYR,
 		params,
 		func(p_res: Dictionary) -> void:
 			qr.res = p_res, # You need a global container inside lambdas
@@ -260,7 +260,7 @@ func _handle_create_account(p_peer: StreamPeerTCP) -> void:
 		_put_error_to_stream_and_quit(p_peer, -qr.err)
 		return
 	
-	p_peer.put_16(eDbReply.CREATED)
+	p_peer.put_16(DbReply.CREATED)
 	
 	var last_insert_id: int = qr.res["last_insert_id"]
 	p_peer.put_u32(last_insert_id)
@@ -288,7 +288,7 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	
 	var tasks: Array[DbTask] = []
 	var task: DbTask = DbTask.new(
-		DB.eStmtID.QRY_PLYR_BY_EMAIL,
+		DB.StmtID.QRY_PLYR_BY_EMAIL,
 		params,
 		func(p_res: Array[Dictionary]) -> void:
 			qr.rows = p_res, # You need a global container inside lambdas
@@ -318,19 +318,19 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 		return
 	
 	if qr.rows.size() != 1:
-		_put_error_to_stream_and_quit(p_peer, eDbReply.NOT_EXIST)
+		_put_error_to_stream_and_quit(p_peer, DbReply.NOT_EXIST)
 		return
 	
 	var row: Dictionary = qr.rows[0]
 	var status: int = row["status"]
-	if status & eAcctStatusBit.LOCKED == eAcctStatusBit.LOCKED:
-		_put_error_to_stream_and_quit(p_peer, eDbReply.LOCKED)
+	if status & AcctStatusBit.LOCKED == AcctStatusBit.LOCKED:
+		_put_error_to_stream_and_quit(p_peer, DbReply.LOCKED)
 		return
 	
 	var login_attempts: int = row["login_attempts"]
 	var time_diff: int = row["time_diff"]
 	if login_attempts >= kLoginAttemptsLockout and kLockoutTime > time_diff:
-		_put_error_to_stream_and_quit(p_peer, eDbReply.LOGIN_ATTEMPT_EXCEEDED)
+		_put_error_to_stream_and_quit(p_peer, DbReply.LOGIN_ATTEMPT_EXCEEDED)
 		return
 	
 	var pswd: String = p_peer.get_utf8_string()
@@ -343,14 +343,14 @@ func _handle_login(p_peer: StreamPeerTCP) -> void:
 	
 
 	if not verified:
-		_put_error_to_stream_and_quit(p_peer, eDbReply.LOGIN_FAIL)
+		_put_error_to_stream_and_quit(p_peer, DbReply.LOGIN_FAIL)
 		login_attempts += 1
 		_update_plyr_login(qr, 0, login_attempts, plyr_id)
 		return
 	else:
 		_update_plyr_login(qr, 0, 0, plyr_id)
 	
-	p_peer.put_16(eDbReply.LOGIN_SUCCESS)
+	p_peer.put_16(DbReply.LOGIN_SUCCESS)
 	p_peer.put_u32(plyr_id)
 	var displayname: String = row["display_name"]
 	p_peer.put_utf8_string(displayname)
@@ -382,7 +382,7 @@ func _update_plyr_login(p_qr: QueryResult, p_status: int,
 		{MariaDBConnector.FT_INT_U: p_plyr_id},
 	]
 	var task: DbTask = DbTask.new(
-		DB.eStmtID.CMD_UPDATE_PLYR_LOGIN,
+		DB.StmtID.CMD_UPDATE_PLYR_LOGIN,
 		params,
 		func(p_res: Dictionary) -> void:
 			p_qr.res = p_res,

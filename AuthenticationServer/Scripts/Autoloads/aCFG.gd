@@ -1,8 +1,11 @@
 # "res://Scripts/Autoload/Servers/aCFG.gd"
 extends Node
 
-signal sCFG_Changed
+signal sCfgChanged
 
+const kServerName: String = "Authentication Server"
+
+const kJsonCfgFile: String = "auth_srvr_cfg.json"
 const kUpdateTime: float = 10.0
 const kCfgJsonKeys: Array = [
 	"cmd_listen_port",
@@ -14,7 +17,7 @@ const kCfgJsonKeys: Array = [
 	"db_user",
 	"gw_listen_port",
 	"gw_max_conns"
-	]
+]
 
 var exe_dir: String
 var data: Dictionary = {}
@@ -35,13 +38,13 @@ func _get_cfg() -> void:
 	exe_dir = ProjectSettings.globalize_path("res://Export/")
 	if !OS.has_feature("editor"):
 		exe_dir = OS.get_executable_path().get_base_dir() + "/"
-	var _cfg_path: String = exe_dir + "auth_srvr_cfg.json"
+	var _cfg_path: String = exe_dir + kJsonCfgFile
 	var new_cfg: Dictionary = FileTool.json_load(_cfg_path)
 	if new_cfg.has_all(kCfgJsonKeys):
 		if data.hash() != new_cfg.hash():
 			data = new_cfg.duplicate(true)
-			print("server starting")
-			sCFG_Changed.emit()
+			print(kServerName, " starting")
+			sCfgChanged.emit()
 	if !data.has_all(kCfgJsonKeys):
-		print("Auth Server Cfg Missing, QUITTING!")
+		print(kServerName, " Cfg Missing, QUITTING!")
 		get_tree().quit(-1)

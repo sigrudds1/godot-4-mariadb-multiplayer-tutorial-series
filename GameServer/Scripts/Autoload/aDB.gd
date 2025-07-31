@@ -1,4 +1,3 @@
-
 # "res://Scripts/Autoload/aDB.gd"
 # NOTE - See the game_srvr_cfg.json, this examples db plain password is "secret" and is hashed with
 #	SHA512, not to	be confused with SHA512/224, SHA512/256, SHA3-512, the MariaDB server user
@@ -11,21 +10,28 @@
 # Connection Pooling
 #	For a faster query we will hold a min connection pool to be ready, the pools will be refreshed
 #		on a given time
+#	We have a limited number of connection in the pool, so connections have to be ran in threads 
+#	or we will get blocking while the request is waiting for a db connection to free; even though 
+#	queries are fast we could get a race condition that arrives to a stalemate and locks the server.
 extends Node
 
 signal sDbConnsChanged
 
-enum eStmtType {
+enum StmtTypes {
 	COMMAND = 1,
 	SELECT
 }
-enum eStmtID{
+enum StmtIDs {
 	QRY_PLAYER_BY_ID,
 	CMD_INSERT_UPDATE_PLAYER,
 	CMD_UPDATE_PLAYER,
 	CMD_INSERT_MSG_BLOCK,
 	CMD_DELETE_MSG_BLOCK,
-	QRY_MSG_BLOCKED_DISPLAY_NAMES
+	QRY_MSG_BLOCKED_DISPLAY_NAMES,
+	CMD_INSERT_PLYR_INTO_MATCH,
+	CMD_DELETE_PLYR_FROM_MATCH,
+	QRY_ALL_MATCHES,
+	QRY_MATCHES,
 }
 
 const kBufferConns: int = 2
@@ -33,24 +39,42 @@ const kDbConnTryMsec: int = 60000 # 1 min
 const kThreadLoopDelay: int = 17
 
 var prepared_statements: Dictionary = {
-	eStmtID.QRY_PLAYER_BY_ID: {eStmtType.SELECT: "SELECT * FROM player WHERE id = ?;"},
-	eStmtID.CMD_INSERT_UPDATE_PLAYER: {eStmtType.COMMAND: "INSERT INTO player SET id=?, 
-		display_name=?, status=? ON DUPLICATE KEY UPDATE status=VALUES(status);" },
-	eStmtID.CMD_UPDATE_PLAYER: {eStmtType.COMMAND: "UPDATE player SET status=?;"},
-	eStmtID.CMD_INSERT_MSG_BLOCK: {
-		eStmtType.COMMAND: "INSERT INTO msg_blocks (plyr_id, blocked_plyr_id)
-			SELECT ?, id
-			FROM player
-			WHERE display_name = ?;"},
-	eStmtID.CMD_DELETE_MSG_BLOCK: {eStmtType.COMMAND: "DELETE FROM msg_blocks
-		WHERE plyr_id = ?
-		  AND blocked_plyr_id = (
-			SELECT id FROM player WHERE display_name = ?
-		  );"},
-	eStmtID.QRY_MSG_BLOCKED_DISPLAY_NAMES: {eStmtType.SELECT: "SELECT p.display_name
-		FROM msg_blocks mb
-		JOIN player p ON p.id = mb.blocked_plyr_id
-		WHERE mb.plyr_id = ?;"}
+	StmtIDs.QRY_PLAYER_BY_ID: {
+		StmtTypes.SELECT: "SELECT * FROM player WHERE id = ?;"},
+	StmtIDs.CMD_INSERT_UPDATE_PLAYER: {
+		StmtTypes.COMMAND: "INSERT INTO player SET id=?, display_name=?, status=? " +
+		"ON DUPLICATE KEY UPDATE status=VALUES(status);" },
+	StmtIDs.CMD_UPDATE_PLAYER: {
+		StmtTypes.COMMAND: "UPDATE player SET status=?;"},
+	StmtIDs.CMD_INSERT_MSG_BLOCK: {
+		StmtTypes.COMMAND: "INSERT INTO msg_blocks (plyr_id, blocked_plyr_id) " +
+			"SELECT ?, id " +
+			"FROM player " +
+			"WHERE display_name=?;"},
+	StmtIDs.CMD_DELETE_MSG_BLOCK: {
+		StmtTypes.COMMAND: "DELETE FROM msg_blocks " +
+			"WHERE plyr_id=? " +
+			"AND blocked_plyr_id = ( " +
+				"SELECT id FROM player " +
+				"WHERE display_name=? );"},
+	StmtIDs.QRY_MSG_BLOCKED_DISPLAY_NAMES: {
+		StmtTypes.SELECT: "SELECT p.display_name " +
+			"FROM msg_blocks mb " +
+			"JOIN player p ON p.id = mb.blocked_plyr_id " +
+			"WHERE mb.plyr_id=?;"},
+	StmtIDs.CMD_INSERT_PLYR_INTO_MATCH: {
+		StmtTypes.COMMAND: "INSERT INTO awaiting_match SET plyr_id=?, side=?, match_type=?;" },
+	StmtIDs.CMD_DELETE_PLYR_FROM_MATCH: {
+		StmtTypes.COMMAND: "DELETE FROM awaiting_match WHERE plyr_id=?;" },
+	StmtIDs.QRY_ALL_MATCHES: {
+		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
+			"ORDER BY dt ASC;" }, 
+	StmtIDs.QRY_MATCHES: {
+		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
+			"WHERE plyr_id != ? " + 
+				"AND match_type IN (?, ?) " +
+				"AND side IN (?, ?, ?) " +
+			"ORDER BY dt ASC, match_type ASC, side ASC;" }, 
 }: set = _set_prepared_statements
 
 var _db_ctx: MariaDBConnectContext = MariaDBConnectContext.new()
@@ -59,14 +83,14 @@ var _db_conn_bfr: Array[DbConn] = []
 var _db_conn_bfr_mutex: Mutex = Mutex.new()
 var _db_conn_issued_bfr: Array[DbConn] = []
 var _db_conn_issued_bfr_mutex: Mutex = Mutex.new()
-var _srvr_wait: bool = true
+var _srvr_change_cfg: bool = true
 var _srvr_running: bool = true
 var _check_db_conns_sema: Semaphore = Semaphore.new()
 var _check_db_conns_thread: Thread = Thread.new()
 
 
 func _ready() -> void:
-	if CFG.sChanged.connect(_change_cfg) != OK:
+	if CFG.sCfgChanged.connect(_change_cfg) != OK:
 		pass
 	#_setup_db_ctx()
 	if TimeLapse.sMinuteLapsed.connect(_on_check_db_conns) != OK:
@@ -85,13 +109,55 @@ func _exit_tree() -> void:
 	Utils.thread_wait_stop(_check_db_conns_thread)
 
 
-func get_db_conn_thread_only() -> DbConn:
-	var db_conn: DbConn = null
-	while _srvr_wait:
-		# Only call inside a thread or it will block main thread, use await inside main thread
-		OS.delay_msec(17)
-		return db_conn
+func do_threaded_cmd_task(
+		p_stmt_id: StmtIDs,
+		sql_params: Array[Dictionary],
+		p_qr: QueryResult,
+		p_this_thread: Thread
+	) -> void:
 	
+	if p_this_thread == null:
+		p_qr.err = -ERR_INVALID_PARAMETER
+		return
+	
+	var task: DbTask = DbTask.new(
+		p_stmt_id,
+		sql_params,
+		func(p_res: Dictionary) -> void:
+			p_qr.res = p_res, # You need a global container inside lambdas
+		func(p_err: int) -> void:
+			p_qr.err = p_err # You need a global container inside lambdas
+	)
+	_do_threaded_task(p_qr, task)
+
+
+func do_threaded_select_task(
+		p_stmt_id: StmtIDs,
+		sql_params: Array[Dictionary],
+		p_qr: QueryResult,
+		p_this_thread: Thread
+	) -> void:
+	
+	if p_this_thread == null:
+		p_qr.err = -ERR_INVALID_PARAMETER
+		return
+	
+	var task: DbTask = DbTask.new(
+		p_stmt_id,
+		sql_params,
+		func(p_res: Array[Dictionary]) -> void:
+			p_qr.rows = p_res, # You need a global container inside lambdas
+		func(p_err: int) -> void:
+			p_qr.err = p_err # You need a global container inside lambdas
+	)
+	_do_threaded_task(p_qr, task)
+
+
+func get_db_conn() -> DbConn:
+	if not _srvr_running or _srvr_change_cfg:
+		return null
+	
+	var db_conn: DbConn = null
 	_db_conn_bfr_mutex.lock()
 	if _db_conn_bfr.size() > 0:
 		db_conn = _db_conn_bfr.pop_back()
@@ -102,14 +168,15 @@ func get_db_conn_thread_only() -> DbConn:
 		_db_conn_issued_bfr.push_back(db_conn)
 		_db_conn_issued_bfr_mutex.unlock()
 		db_conn.issued = true
-	call_deferred("emit_signal", "sDbConnsChanged")
-
+	
 	return db_conn
 
 
 func _change_cfg() -> void:
-	_srvr_wait = true
+	_srvr_change_cfg = true
+	
 	_setup_db_ctx()
+	
 	_db_conn_bfr_mutex.lock()
 	_db_conn_issued_bfr_mutex.lock()
 	for conn:DbConn in _db_conn_bfr:
@@ -119,8 +186,8 @@ func _change_cfg() -> void:
 	_db_conn_bfr_mutex.unlock()
 	_db_conn_issued_bfr_mutex.unlock()
 
-	await get_tree().create_timer(0.1).timeout
-	_srvr_wait = false
+	await get_tree().physics_frame
+	_srvr_change_cfg = false
 	sDbConnsChanged.emit()
 	_test_game_db()
 
@@ -175,6 +242,22 @@ func _check_conns_thread_func() -> void:
 				break_msec = Time.get_ticks_msec() + 1000
 		
 		_check_db_conns_sema.wait()
+
+
+func _do_threaded_task(p_qr: QueryResult, p_task: DbTask) -> void:
+	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
+	var db_conn: DbConn = DB.get_db_conn()
+	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
+	# Only call inside a thread or it will block main thread, use await inside main thread
+		OS.delay_msec(DB.kThreadLoopDelay) 
+		db_conn = DB.get_db_conn()
+	
+	if db_conn == null:
+		p_qr.err = MariaDBConnector.ErrorCode.ERR_NOT_CONNECTED
+	else:
+		db_conn.do_tasks([p_task])
+		db_conn.issued = false
+		db_conn = null
 
 
 func _on_check_db_conns() -> void:

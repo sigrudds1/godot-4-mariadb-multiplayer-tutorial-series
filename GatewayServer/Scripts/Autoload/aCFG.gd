@@ -1,11 +1,11 @@
-# "res://Scripts/Autoload/aGameServer.gd"
+# "res://Scripts/Autoload/aSanitize.gd"
 extends Node
 
-# signals
-signal cfg_changed
+signal sChanged
 
-# enums
-# constants
+const kServerName: String = "Gateway Server"
+
+const kJsonCfgFile: String = "gw_srvr_cfg.json"
 const kSSLKeyPath: String = "x509Cert/test.key"
 const kSSLCertPath: String = "x509Cert/test.crt"
 const kMaxGameServers: int = 8
@@ -27,30 +27,27 @@ const kCfgJsonKeys: Array = [
 ]
 
 
-# @export variables
-# public variables
 var exe_dir: String
 var id: int = 0
 var data: Dictionary = {}
 var tls_server_opts: TLSOptions
 
-# friend variables
-# private variables
-var _cfg_path: String
 var _update_tmr: float = kUpdateTime
 
-# @onready variables
-#@onready var _main_node = get_node("/root/Main")
+
+# We will eventually set ip and port in command args, when multiple servers are needed
+func _ready() -> void:
+	var args: Dictionary = {}
+	print("Command line args:", OS.get_cmdline_user_args())
+	
+	for arg:String in OS.get_cmdline_user_args():
+		if arg.find("=") > -1:
+			var key_value: PackedStringArray = arg.split("=")
+			args[key_value[0].lstrip("--")] = key_value[1]
+		else:
+			args[arg.lstrip("--")] = ""
 
 
-# optional built-in virtual _init method
-# optional built-in virtual _enter_tree() method
-
-# built-in virtual _ready method
-#func _ready() -> void:
-
-
-# remaining built-in virtual methods
 func _physics_process(p_delta: float) -> void:
 	_update_tmr += p_delta
 	if _update_tmr > kUpdateTime:
@@ -58,24 +55,23 @@ func _physics_process(p_delta: float) -> void:
 		_get_cfg()
 		_get_tls_opts()
 
-# public methods
 
-# friend methods
-# private methods
 func _get_cfg() -> void:
-	var cfg_hash: int = data.hash()
+	# Export folder contains all the items needd to be included with project export,
+	#	 but not included in the pck.
 	exe_dir = ProjectSettings.globalize_path("res://Export/")
 	if !OS.has_feature("editor"):
 		exe_dir = OS.get_executable_path().get_base_dir() + "/"
-	_cfg_path = exe_dir + "gw_srvr_cfg.json"
+	var _cfg_path: String = exe_dir + kJsonCfgFile
 	var new_cfg: Dictionary = FileTool.json_load(_cfg_path)
-	if !new_cfg.has_all(kCfgJsonKeys):
-		printerr("CFG File missing keys!")
-		return
-	data = new_cfg.duplicate(true)
-	if cfg_hash != data.hash():
-		print("Gateway server starting")
-		cfg_changed.emit()
+	if new_cfg.has_all(kCfgJsonKeys):
+		if data.hash() != new_cfg.hash():
+			data = new_cfg.duplicate(true)
+			print(kServerName, " starting")
+			sChanged.emit()
+	if !data.has_all(kCfgJsonKeys):
+		print(kServerName, " Cfg Missing, QUITTING!")
+		get_tree().quit(-1)
 
 
 func _get_tls_opts() -> void:
@@ -84,7 +80,3 @@ func _get_tls_opts() -> void:
 	var ssl_key: CryptoKey = load(exe_dir + kSSLKeyPath)
 	var ssl_crt: X509Certificate = load(exe_dir + kSSLCertPath)
 	tls_server_opts = TLSOptions.server(ssl_key, ssl_crt)
-
-#	tls_client_opts = TLSOptions.client_unsafe(ssl_crt) # testing with self signed
-
-# signal methods

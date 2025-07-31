@@ -1,3 +1,4 @@
+# "res://Scripts/Autoload/aTimeLapse.gd"
 extends Node
 
 signal s2Ticks
