@@ -12,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_6uxbt")
 
-[node name="Login_pnl_cont" type="PanelContainer" parent="."]
+[node name="Login_panel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -27,24 +27,25 @@ offset_bottom = 110.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Login_pnl_cont"]
+[node name="MarginContainer" type="MarginContainer" parent="Login_panel"]
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Login_pnl_cont/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Login_panel/MarginContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_constants/separation = 4
 
-[node name="Server_OptionButton" type="OptionButton" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Server_opt_btn" type="OptionButton" parent="Login_panel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
-selected = 1
+selected = 2
 item_count = 3
 popup/item_0/text = "Localhost"
 popup/item_0/id = 0
@@ -53,14 +54,14 @@ popup/item_1/id = 1
 popup/item_2/text = "Ubuntu24"
 popup/item_2/id = 2
 
-[node name="Email" type="LineEdit" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Email" type="LineEdit" parent="Login_panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "some_email@someplace.nul"
 placeholder_text = "Email"
 alignment = 1
 
-[node name="Displayname" type="LineEdit" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Displayname" type="LineEdit" parent="Login_panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -68,7 +69,7 @@ text = "some_user"
 placeholder_text = "Display Name"
 alignment = 1
 
-[node name="Password" type="LineEdit" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Password" type="LineEdit" parent="Login_panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "some_password"
@@ -76,21 +77,21 @@ placeholder_text = "Password"
 alignment = 1
 secret = true
 
-[node name="Spacer" type="Control" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Spacer" type="Control" parent="Login_panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Submit_btn" type="Button" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Submit_btn" type="Button" parent="Login_panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Submit"
 
-[node name="Register" type="CheckBox" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Register" type="CheckBox" parent="Login_panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Register"
 
-[node name="Exit_btn" type="Button" parent="Login_pnl_cont/MarginContainer/VBoxContainer"]
+[node name="Exit_btn" type="Button" parent="Login_panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Exit"
 
@@ -137,8 +138,8 @@ texture_hover = ExtResource("2_uo606")
 texture_disabled = ExtResource("2_uo606")
 texture_focused = ExtResource("2_uo606")
 
-[connection signal="item_selected" from="Login_pnl_cont/MarginContainer/VBoxContainer/Server_OptionButton" to="." method="_on_server_option_button_item_selected"]
-[connection signal="pressed" from="Login_pnl_cont/MarginContainer/VBoxContainer/Submit_btn" to="." method="_on_submit_btn_pressed"]
-[connection signal="toggled" from="Login_pnl_cont/MarginContainer/VBoxContainer/Register" to="." method="_on_register_toggled"]
-[connection signal="pressed" from="Login_pnl_cont/MarginContainer/VBoxContainer/Exit_btn" to="." method="_on_exit_btn_pressed"]
+[connection signal="item_selected" from="Login_panel/MarginContainer/VBoxContainer/Server_opt_btn" to="." method="_on_server_option_button_item_selected"]
+[connection signal="pressed" from="Login_panel/MarginContainer/VBoxContainer/Submit_btn" to="." method="_on_submit_btn_pressed"]
+[connection signal="toggled" from="Login_panel/MarginContainer/VBoxContainer/Register" to="." method="_on_register_toggled"]
+[connection signal="pressed" from="Login_panel/MarginContainer/VBoxContainer/Exit_btn" to="." method="_on_exit_btn_pressed"]
 [connection signal="pressed" from="PopupMsg_panel/PanelContainer/PopupMsgClose_tbtn" to="." method="_on_popup_msg_close_tbtn_pressed"]

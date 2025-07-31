@@ -1,8 +1,14 @@
-[gd_scene load_steps=4 format=3 uid="uid://dpy6vmi0e7p5l"]
+[gd_scene load_steps=6 format=3 uid="uid://dpy6vmi0e7p5l"]
 
 [ext_resource type="Script" uid="uid://bxy5mixds3g7x" path="res://Scenes/Lobby.gd" id="1_bpe3w"]
 [ext_resource type="PackedScene" uid="uid://cx0wfv2cof6gt" path="res://Scenes/BlockledPlyrLine.tscn" id="2_lolwk"]
 [ext_resource type="Texture2D" uid="uid://ykode3bwq8qf" path="res://Assets/Images/UI/button_rectangleRedClose.png" id="2_wgubu"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_wgubu"]
+resource_name = "MatchSide"
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_nsj2m"]
+resource_name = "MatchType"
 
 [node name="Lobby" type="PanelContainer"]
 anchors_preset = 15
@@ -30,6 +36,18 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Inventory"
+
+[node name="Craft_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Craft"
+
+[node name="Match_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Match"
 
 [node name="Options_btn" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
@@ -69,45 +87,236 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Send"
 
-[node name="BlockedPlayerList_panel" type="PanelContainer" parent="."]
+[node name="Match_panel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="MarginContainer" type="MarginContainer" parent="BlockedPlayerList_panel"]
+[node name="MarginContainer" type="MarginContainer" parent="Match_panel"]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="BlockedPlayerList_panel/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Match_panel/MarginContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer"]
+[node name="Match_Label" type="Label" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Match"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Match_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SelectSide_Label" type="Label" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Select Side"
+horizontal_alignment = 1
+
+[node name="MatchSide_HBoxContainer" type="HBoxContainer" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="SideTanks_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchSide_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_wgubu")
+text = "Tanks"
+alignment = 1
+
+[node name="SideAny_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchSide_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+button_group = SubResource("ButtonGroup_wgubu")
+text = "Any"
+alignment = 1
+
+[node name="SideTowers_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchSide_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_wgubu")
+text = "Towers"
+alignment = 1
+
+[node name="MatchSide_HBoxContainer2" type="HBoxContainer" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="SidePrefTanks_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchSide_HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_wgubu")
+text = "Prefer Tanks"
+alignment = 1
+
+[node name="SidePrefTowers_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchSide_HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_wgubu")
+text = "Prefer Towers"
+alignment = 1
+
+[node name="Spacer2" type="Control" parent="Match_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SelectMatchType_Label" type="Label" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Match Type"
+horizontal_alignment = 1
+
+[node name="MatchType_HBoxContainer" type="HBoxContainer" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="MatchTypePVE_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchType_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_nsj2m")
+text = "Only PVE"
+alignment = 1
+metadata/_edit_group_ = true
+
+[node name="MatchTypeTryPVP_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchType_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+button_group = SubResource("ButtonGroup_nsj2m")
+text = "Try PVP"
+alignment = 1
+
+[node name="MatchTypePVP_CheckBox" type="CheckBox" parent="Match_panel/MarginContainer/VBoxContainer/MatchType_HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+button_group = SubResource("ButtonGroup_nsj2m")
+text = "Only PVP"
+alignment = 1
+
+[node name="Spacer3" type="Control" parent="Match_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StartMatch_Button" type="Button" parent="Match_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Start Match"
+
+[node name="BlockedPlayerListClose_tbtn" type="TextureButton" parent="Match_panel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("2_wgubu")
+texture_pressed = ExtResource("2_wgubu")
+texture_hover = ExtResource("2_wgubu")
+texture_disabled = ExtResource("2_wgubu")
+texture_focused = ExtResource("2_wgubu")
+
+[node name="AwaitMatch_panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="AwaitMatch_panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="AwaitMatch_panel/MarginContainer"]
+layout_mode = 2
+
+[node name="AwaitMatch_Label" type="Label" parent="AwaitMatch_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Awaiting Match"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="AwaitMatch_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Spacer2" type="Control" parent="AwaitMatch_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Spacer3" type="Control" parent="AwaitMatch_panel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CancelMatch_Button" type="Button" parent="AwaitMatch_panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Cancel"
+
+[node name="BlockedPlayerListClose_tbtn" type="TextureButton" parent="AwaitMatch_panel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("2_wgubu")
+texture_pressed = ExtResource("2_wgubu")
+texture_hover = ExtResource("2_wgubu")
+texture_disabled = ExtResource("2_wgubu")
+texture_focused = ExtResource("2_wgubu")
+
+[node name="Options_panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="Options_panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Options_panel/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Options_panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Blocked Players"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="Options_panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="BlockedPlyr_box" type="VBoxContainer" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="Options_BlockedPlyr_box" type="VBoxContainer" parent="Options_panel/MarginContainer/VBoxContainer/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 alignment = 2
 
-[node name="BlockedPlyrLine" parent="BlockedPlayerList_panel/MarginContainer/VBoxContainer/ScrollContainer/BlockedPlyr_box" instance=ExtResource("2_lolwk")]
+[node name="BlockedPlyrLine" parent="Options_panel/MarginContainer/VBoxContainer/ScrollContainer/Options_BlockedPlyr_box" instance=ExtResource("2_lolwk")]
 layout_mode = 2
 
-[node name="BlockedPlayerListClose_tbtn" type="TextureButton" parent="BlockedPlayerList_panel"]
+[node name="BlockedPlayerListClose_tbtn" type="TextureButton" parent="Options_panel"]
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
@@ -117,41 +326,41 @@ texture_hover = ExtResource("2_wgubu")
 texture_disabled = ExtResource("2_wgubu")
 texture_focused = ExtResource("2_wgubu")
 
-[node name="BlockReportPlyr_panel" type="PanelContainer" parent="."]
+[node name="ReportPlyr_panel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="MarginContainer" type="MarginContainer" parent="BlockReportPlyr_panel"]
+[node name="MarginContainer" type="MarginContainer" parent="ReportPlyr_panel"]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="Panel" type="PanelContainer" parent="BlockReportPlyr_panel/MarginContainer"]
+[node name="Panel" type="PanelContainer" parent="ReportPlyr_panel/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="BlockReportPlyr_panel/MarginContainer/Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ReportPlyr_panel/MarginContainer/Panel"]
 layout_mode = 2
 
-[node name="BlockReportPlayerName_label" type="Label" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+[node name="ReportPlayerName_label" type="Label" parent="ReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Player Name"
 horizontal_alignment = 1
 
-[node name="AddBlockedPlyr_btn" type="Button" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+[node name="AddBlockedPlyr_btn" type="Button" parent="ReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Block"
 
-[node name="ReportPlyr_btn" type="Button" parent="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
+[node name="ReportPlyr_btn" type="Button" parent="ReportPlyr_panel/MarginContainer/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Report"
 
-[node name="BlockReportPlyrClose_tbtn" type="TextureButton" parent="BlockReportPlyr_panel"]
+[node name="ReportPlyrClose_tbtn" type="TextureButton" parent="ReportPlyr_panel"]
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
@@ -161,11 +370,16 @@ texture_hover = ExtResource("2_wgubu")
 texture_disabled = ExtResource("2_wgubu")
 texture_focused = ExtResource("2_wgubu")
 
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/Match_btn" to="." method="_on_match_btn_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/Options_btn" to="." method="_on_options_btn_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/Quit_btn" to="." method="_on_quit_btn_pressed"]
 [connection signal="text_submitted" from="MarginContainer/VBoxContainer/HBoxContainer2/LineEdit" to="." method="_on_line_edit_text_submitted"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer2/Send_msg_btn" to="." method="_on_send_msg_btn_pressed"]
-[connection signal="pressed" from="BlockedPlayerList_panel/BlockedPlayerListClose_tbtn" to="." method="_on_blocked_player_list_close_tbtn_pressed"]
-[connection signal="pressed" from="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer/AddBlockedPlyr_btn" to="." method="_on_add_blocked_plyr_btn_pressed"]
-[connection signal="pressed" from="BlockReportPlyr_panel/MarginContainer/Panel/VBoxContainer/ReportPlyr_btn" to="." method="_on_report_plyr_btn_pressed"]
-[connection signal="pressed" from="BlockReportPlyr_panel/BlockReportPlyrClose_tbtn" to="." method="_on_block_report_plyr_close_tbtn_pressed"]
+[connection signal="pressed" from="Match_panel/MarginContainer/VBoxContainer/StartMatch_Button" to="." method="_on_start_match_button_pressed"]
+[connection signal="pressed" from="Match_panel/BlockedPlayerListClose_tbtn" to="." method="_on_menu_window_x_btn"]
+[connection signal="pressed" from="AwaitMatch_panel/MarginContainer/VBoxContainer/CancelMatch_Button" to="." method="_on_start_match_button_pressed"]
+[connection signal="pressed" from="AwaitMatch_panel/BlockedPlayerListClose_tbtn" to="." method="_on_menu_window_x_btn"]
+[connection signal="pressed" from="Options_panel/BlockedPlayerListClose_tbtn" to="." method="_on_menu_window_x_btn"]
+[connection signal="pressed" from="ReportPlyr_panel/MarginContainer/Panel/VBoxContainer/AddBlockedPlyr_btn" to="." method="_on_add_blocked_plyr_btn_pressed"]
+[connection signal="pressed" from="ReportPlyr_panel/MarginContainer/Panel/VBoxContainer/ReportPlyr_btn" to="." method="_on_report_plyr_btn_pressed"]
+[connection signal="pressed" from="ReportPlyr_panel/ReportPlyrClose_tbtn" to="." method="_on_menu_window_x_btn"]

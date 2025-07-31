@@ -31,6 +31,8 @@ func _on_connected_ok() -> void:
 
 
 func _on_login_success() -> void:
+	var ip: String = IP.resolve_hostname(game_srvr_url)
+	print("connectin to url %s as ip %s and port %d" % [game_srvr_url, ip, game_srvr_port])
 	if not game_srvr_url.is_valid_ip_address():
 		print("ConnectionIface._on_login_success invalid IP:")
 		return
@@ -51,6 +53,16 @@ func _on_server_disconnected() -> void:
 	multiplayer.multiplayer_peer = null
 	if get_tree().change_scene_to_file("res://Login.tscn"):
 		pass
+
+
+@rpc("any_peer", "reliable")
+func client_cancel_match() -> void:
+	pass
+
+
+@rpc("any_peer", "reliable")
+func client_request_match(_side:DataTypes.PlaySide, _type:DataTypes.MatchType) -> void:
+	pass
 
 
 # RPC function signatures have to match, create dummy signatures on caller side

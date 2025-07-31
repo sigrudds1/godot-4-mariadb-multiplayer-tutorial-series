@@ -1,6 +1,6 @@
 extends Control
 
-enum eReply {
+enum Reply {
 	OK,
 	UNAME_UNAVAILABLE,
 	DNAME_UNAVAILABLE,
@@ -12,7 +12,7 @@ enum eReply {
 	LOGIN_FAIL,
 }
 
-enum eFuncCode {
+enum FuncCode {
 	CREATE_ACCOUNT = 1,
 	CHANGE_PASSWORD,
 	CONNECT_PLYR,
@@ -31,11 +31,13 @@ var _gateway_srvrs: Array[Dictionary] = [
 	{"host": "192.168.2.240", "port": 61000}
 ]
 
-@onready var _login_panel: PanelContainer = %Login_pnl_cont
+@onready var _login_panel: PanelContainer = %Login_panel
+@onready var _srvr_opt_btn: OptionButton = %Server_opt_btn
 @onready var _email_line: LineEdit = %Email
 @onready var _display_name_line: LineEdit = %Displayname
 @onready var _password_line: LineEdit = %Password
 @onready var _registration_btn: CheckBox = %Register
+
 @onready var _popup_msg_panel: Control = %PopupMsg_panel
 @onready var _popup_msg_rtl: RichTextLabel = %PopupMsg_RTL
 
@@ -92,9 +94,10 @@ func _popup_msg(p_text:String) -> void:
 
 
 func _tls_thread(p_this_thread: Thread) -> void:
-	var func_code: int = eFuncCode.LOGIN
+	_on_server_option_button_item_selected(_srvr_opt_btn.selected)
+	var func_code: int = FuncCode.LOGIN
 	if _registration_btn.button_pressed:
-		func_code = eFuncCode.CREATE_ACCOUNT
+		func_code = FuncCode.CREATE_ACCOUNT
 	
 	var gateway_url: String = ""
 	var gateway_port: int
@@ -118,7 +121,7 @@ func _tls_thread(p_this_thread: Thread) -> void:
 		TLSOptions.client_unsafe())
 	tls_peer.put_u16(func_code)
 	tls_peer.put_utf8_string(_email_line.text)
-	if func_code == eFuncCode.CREATE_ACCOUNT:
+	if func_code == FuncCode.CREATE_ACCOUNT:
 		tls_peer.put_utf8_string(_display_name_line.text)
 	tls_peer.put_utf8_string(_password_line.text)
 	
@@ -131,7 +134,7 @@ func _tls_thread(p_this_thread: Thread) -> void:
 		avail_bytes = tls_peer.get_available_bytes()
 	if NetTool.tls_is_connected(tls_peer):
 		var reply_code: int = tls_peer.get_16()
-		if reply_code == eReply.LOGIN_SUCCESS or reply_code == eReply.CREATED:
+		if reply_code == Reply.LOGIN_SUCCESS or reply_code == Reply.CREATED:
 			ConnectionIface.game_srvr_url = tls_peer.get_utf8_string()
 			ConnectionIface.game_srvr_port = tls_peer.get_u16()
 			ConnectionIface.display_name = tls_peer.get_utf8_string()
@@ -142,17 +145,17 @@ func _tls_thread(p_this_thread: Thread) -> void:
 			printerr("login failed with code:", reply_code)
 			var msg: String = ""
 			match reply_code:
-				eReply.UNAME_UNAVAILABLE:
+				Reply.UNAME_UNAVAILABLE:
 					msg = "Email Not available."
-				eReply.DNAME_UNAVAILABLE:
+				Reply.DNAME_UNAVAILABLE:
 					msg = "Display Name Not available."
-				eReply.LOCKED:
+				Reply.LOCKED:
 					msg = "Account Locked Contact Support."
-				eReply.LOGIN_ATTEMPT_EXCEEDED:
+				Reply.LOGIN_ATTEMPT_EXCEEDED:
 					msg = "Failed Login Attempts Exceeded Try Back in 15 Minutes."
-				eReply.NOT_EXIST:
+				Reply.NOT_EXIST:
 					msg = "Account does not exist, please register!"
-				eReply.LOGIN_FAIL:
+				Reply.LOGIN_FAIL:
 					msg = "Login Failed Check Username and Password."
 				_:
 					msg = "Unknown Error Code:%d" % reply_code

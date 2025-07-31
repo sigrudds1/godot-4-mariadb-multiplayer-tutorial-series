@@ -18,10 +18,12 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+DataTypes="*res://Scripts/Autoload/aDataTypes.gd"
 TimeLapse="*res://Scripts/Autoload/aTimeLapse.gd"
 ConnectionIface="*res://Scripts/Autoload/RPC/aConnectionIface.gd"
 MessagingIface="*res://Scripts/Autoload/RPC/aMessagingIface.gd"
 InventoryIface="*res://Scripts/Autoload/RPC/aInventoryIface.gd"
+MatchIface="*res://Scripts/Autoload/RPC/aMatchIface.gd"
 
 [debug]
 
