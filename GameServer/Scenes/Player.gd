@@ -85,8 +85,8 @@ func _fetch_db_inventory(_thread: Thread) -> void:
 
 
 func _send_msg(p_from_plyr: String, p_msg: String) -> void:
-	if msg_blocked_plyrs.find(p_from_plyr) > -1:
-		return
+	if msg_blocked_plyrs.find(p_from_plyr) > -1: return
+	
 	MessagingIface.srvr_send_msg.rpc_id(peer_id, p_from_plyr, p_msg)
 
 
@@ -107,13 +107,11 @@ func _update_blocked_plyr_list(p_thread: Thread) -> void:
 func _update_db() -> void:
 	var thr: Thread = Thread.new()
 	var err_code: Error = thr.start(_update_db_thread_func.bind(thr, UpdateStates.UPDATE))
-	if err_code != OK:
-		printerr("player _update_db_thread_func start error code:" + str(err_code))
+	if err_code != OK: printerr("player _update_db_thread_func start error code:" + str(err_code))
 
 
 func _update_db_blocked_plyrs(p_thread: Thread) -> void:
-	if p_thread == null:
-		return
+	if p_thread == null: return
 	
 	var db_del_params_list: Array = []
 	
@@ -134,8 +132,7 @@ func _update_db_blocked_plyrs(p_thread: Thread) -> void:
 			]
 			db_insert_params_list.push_back(sql_params)
 	
-	if db_del_params_list.size() == 0 and db_insert_params_list.size() == 0:
-		return
+	if db_del_params_list.size() == 0 and db_insert_params_list.size() == 0: return
 	
 	var qr: QueryResult = QueryResult.new()
 	var task: DbTask = DbTask.new(DB.StmtIDs.DELETE_MSG_BLOCKED_PLYR, [], qr)
@@ -146,12 +143,11 @@ func _update_db_blocked_plyrs(p_thread: Thread) -> void:
 		OS.delay_msec(DB.kThreadLoopDelay) 
 		db_conn = DB.get_db_conn()
 	
-	if db_conn == null:
-		return
+	if db_conn == null: return
 	
 	for params:Array[Dictionary] in db_del_params_list:
 		task.params = params
-		db_conn.do_task_continue(task)
+		db_conn.do_task_keep_issued(task)
 		if qr.error != MariaDBConnector.ErrorCode.OK:
 			printerr("Error processiong DELETE_MSG_BLOCKED_PLYR with params ", params)
 	
@@ -159,7 +155,7 @@ func _update_db_blocked_plyrs(p_thread: Thread) -> void:
 	
 	for params:Array[Dictionary] in db_insert_params_list:
 		task.params = params
-		db_conn.do_task_continue(task)
+		db_conn.do_task_keep_issued(task)
 		if qr.error != MariaDBConnector.ErrorCode.OK:
 			printerr("Error processiong INSERT_MSG_BLOCKED_PLYR with params ", params)
 	
@@ -167,13 +163,12 @@ func _update_db_blocked_plyrs(p_thread: Thread) -> void:
 	db_conn = null
 
 
-func _update_db_inventory(_thread: Thread) -> void:
+func _update_db_inventory(_thread: Thread) -> void: 
 	pass
 
 
 func _update_db_thread_func(p_this_thread: Thread, p_update_state: UpdateStates) -> void:
-	if p_update_state != UpdateStates.UPDATE:
-		_update_plyr_status(p_this_thread)
+	if p_update_state != UpdateStates.UPDATE: _update_plyr_status(p_this_thread)
 	
 	if p_update_state == UpdateStates.CONNECT:
 		_update_blocked_plyr_list(p_this_thread)
@@ -186,8 +181,7 @@ func _update_db_thread_func(p_this_thread: Thread, p_update_state: UpdateStates)
 
 
 func _update_plyr_status(p_thread: Thread) -> void:
-	if p_thread == null:
-		return
+	if p_thread == null: return
 	
 	var stmt_id: DB.StmtIDs = DB.StmtIDs.INSERT_OR_UPDATE_PLYR
 	var sql_params: Array[Dictionary] = [
@@ -199,5 +193,4 @@ func _update_plyr_status(p_thread: Thread) -> void:
 	var task: DbTask =  DbTask.new(stmt_id, sql_params, qr)
 	DB.do_threaded_task(task, p_thread)
 	
-	if qr.error != MariaDBConnector.ErrorCode.OK:
-		printerr("INSERT_OR_UPDATE_PLYR error:", qr.error)
+	if qr.error != MariaDBConnector.ErrorCode.OK: printerr("INSERT_OR_UPDATE_PLYR error:", qr.error)

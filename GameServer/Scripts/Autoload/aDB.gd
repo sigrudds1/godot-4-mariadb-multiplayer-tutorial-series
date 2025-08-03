@@ -90,17 +90,14 @@ var _check_db_conns_thread: Thread = Thread.new()
 
 
 func _ready() -> void:
-	if CFG.sCfgChanged.connect(_change_cfg) != OK:
-		pass
-	#_setup_db_ctx()
-	if TimeLapse.sMinuteLapsed.connect(_on_check_db_conns) != OK:
-		pass
-	if sDbConnsChanged.connect(_on_check_db_conns) != OK:
-		pass
+	if CFG.sCfgChanged.connect(_change_cfg) != OK: pass
+	
+	if TimeLapse.sOneMinuteLapsed.connect(_on_check_db_conns) != OK: pass
+	
+	if sDbConnsChanged.connect(_on_check_db_conns) != OK: pass
 	
 	var error: int = _check_db_conns_thread.start(_check_conns_thread_func)
-	if error != OK:
-		printerr("Starting _check_db_conns_thread error with ", error)
+	if error != OK: printerr("Starting _check_db_conns_thread error with ", error)
 
 
 func _exit_tree() -> void:
@@ -110,8 +107,7 @@ func _exit_tree() -> void:
 
 
 func do_threaded_multitask(p_tasks: Array[DbTask], p_thread: Thread) -> int:
-	if p_thread == null:
-		return ERR_INVALID_PARAMETER
+	if p_thread == null: return ERR_INVALID_PARAMETER
 	
 	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
 	var db_conn: DbConn = DB.get_db_conn()
@@ -123,7 +119,7 @@ func do_threaded_multitask(p_tasks: Array[DbTask], p_thread: Thread) -> int:
 	if db_conn == null:
 		return ERR_CANT_CONNECT
 	else:
-		db_conn.do_tasks(p_tasks)
+		db_conn.do_tasks_release(p_tasks)
 		db_conn = null
 	
 	return OK
@@ -144,13 +140,11 @@ func do_threaded_task(p_task: DbTask, p_thread: Thread) -> void:
 	if db_conn == null:
 		p_task.query_result.error =  ERR_CANT_CONNECT
 	else:
-		db_conn.do_task(p_task)
+		db_conn.do_task_release(p_task)
 		db_conn = null
 
-
 func get_db_conn() -> DbConn:
-	if not _srvr_running or _srvr_change_cfg:
-		return null
+	if not _srvr_running or _srvr_change_cfg: return null
 	
 	var db_conn: DbConn = null
 	_db_conn_bfr_mutex.lock()
@@ -199,7 +193,7 @@ func _check_conns_thread_func() -> void:
 		_db_conn_bfr_mutex.unlock()
 
 		_db_conn_issued_bfr_mutex.lock()
-		for i:int in range(_db_conn_issued_bfr.size() - 1, -1, -1):
+		for i: int in range(_db_conn_issued_bfr.size() - 1, -1, -1):
 			var conn: DbConn = _db_conn_issued_bfr[i]
 			if conn == null:
 				_db_conn_issued_bfr.remove_at(i)
@@ -220,8 +214,9 @@ func _check_conns_thread_func() -> void:
 
 		var break_msec: int = Time.get_ticks_msec() + 1000
 		while (_max_db_conns > dbconns + busy_dbconns and
-				dbconns < kBufferConns and
-				Time.get_ticks_msec() < break_msec):
+			dbconns < kBufferConns and
+			Time.get_ticks_msec() < break_msec):
+			
 			var db_conn: DbConn = DbConn.new(_db_ctx)
 			# Every DB connection needs the prepared statements as they are not shared
 			for glb_id:int in prepared_statements.keys():

@@ -4,7 +4,7 @@ const kConnStaleTicks: int = 600000
 const kForgotMsec: int = 5000 # 5 sec
 
 var issued: bool = false: set = _set_issued
-var last_error: int = 0
+var last_error: MariaDBConnector.ErrorCode = MariaDBConnector.ErrorCode.OK
 
 var _busy: bool = false
 var _ctx: MariaDBConnectContext
@@ -62,45 +62,47 @@ func add_prepared_stmt(p_glb_id: int, p_stmt: String, p_overwrite:bool = false) 
 
 
 func do_command_stmt(p_stmt: String) -> Dictionary:
-	if not issued:
-		_set_issued(true)
+	if not issued: _set_issued(true)
+	
 	_last_active_msec = Time.get_ticks_msec()
 	_busy = true
 	var result: Dictionary = _db_conn.execute_command(p_stmt)
 	last_error = _db_conn.last_error
 	_busy = false
-	if issued:
-		_set_issued(false)
+	
+	if issued: _set_issued(false)
+	
 	return result
 
 
 func do_command_stmt_continue(p_stmt: String) -> Dictionary:
-	if not issued:
-		_set_issued(true)
+	if not issued: _set_issued(true)
+	
 	_last_active_msec = Time.get_ticks_msec()
 	_busy = true
 	var result: Dictionary = _db_conn.execute_command(p_stmt)
 	last_error = _db_conn.last_error
 	_busy = false
+	
 	return result
 
 
 func do_select_stmt(p_stmt: String) -> Array[Dictionary]:
-	if not issued:
-		_set_issued(true)
+	if not issued: _set_issued(true)
+	
 	_last_active_msec = Time.get_ticks_msec()
 	_busy = true
 	var result: Array[Dictionary] = _db_conn.select_query(p_stmt)
 	last_error = _db_conn.last_error
 	_busy = false
-	if issued:
-		_set_issued(false)
+	if issued: _set_issued(false)
+	
 	return result
 
 
 func do_select_stmt_continue(p_stmt: String) -> Array[Dictionary]:
-	if not issued:
-		_set_issued(true)
+	if not issued: _set_issued(true)
+	
 	_last_active_msec = Time.get_ticks_msec()
 	_busy = true
 	var result: Array[Dictionary] = _db_conn.select_query(p_stmt)
@@ -109,31 +111,29 @@ func do_select_stmt_continue(p_stmt: String) -> Array[Dictionary]:
 	return result
 
 
-func do_task(p_task: DbTask) -> void:
-	do_task_continue(p_task)
-	if issued:
-		_set_issued(false)
+func do_task_release(p_task: DbTask) -> void:
+	do_task_keep_issued(p_task)
+	if issued: _set_issued(false)
 
 
-func do_task_continue(p_task: DbTask) -> void:
-	if not issued:
-		_set_issued(true)
-	if not _check_task(p_task):
-		return
+func do_task_keep_issued(p_task: DbTask) -> void:
+	if not issued: _set_issued(true)
+	
+	if not _check_task(p_task): return
+	
 	_do_task(p_task)
 
 
-func do_tasks(p_tasks: Array[DbTask]) -> void:
-	do_tasks_continue(p_tasks)
-	if issued:
-		_set_issued(false)
+func do_tasks_release(p_tasks: Array[DbTask]) -> void:
+	do_tasks_keep_issued(p_tasks)
+	if issued: _set_issued(false)
 
 
-func do_tasks_continue(p_tasks: Array[DbTask]) -> void:
-	if not issued:
-		_set_issued(true)
+func do_tasks_keep_issued(p_tasks: Array[DbTask]) -> void:
+	if not issued: _set_issued(true)
+	
 	for task: DbTask in p_tasks:
-		do_task_continue(task)
+		do_task_keep_issued(task)
 
 
 func _check_task(p_task: DbTask) -> bool:
@@ -156,9 +156,8 @@ func _check_task(p_task: DbTask) -> bool:
 
 func _connect_signal() -> void:
 	# More efficient then timers, coupling ok since TimeLapse is an autoload
-	var error: int = TimeLapse.sFiveSecondsLapsed.connect(_update_connection)
-	if error:
-		printerr(self, "Can not connect to TimeLapse.sFiveSecondsLapsed")
+	var error: int = TimeLapse.sOneSecondLapsed.connect(_update_connection)
+	if error: printerr(self, "Can not connect to TimeLapse.sFiveSecondsLapsed")
 
 
 func _do_prepared_cmd(p_task: DbTask) -> void:

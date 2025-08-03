@@ -8,7 +8,7 @@ var _running: bool = true
 
 
 func _ready() -> void:
-	if TimeLapse.sSecondLapsed.connect(_post_awaiting_match_thread) != OK:
+	if TimeLapse.sOneSecondLapsed.connect(_post_awaiting_match_thread) != OK:
 		pass
 	
 	var err_code: Error = _match_thread.start(_awaiting_match_thread_func.bind(_match_thread))

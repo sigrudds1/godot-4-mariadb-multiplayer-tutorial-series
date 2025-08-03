@@ -32,19 +32,17 @@ func client_report_player(p_reported_plyr_display_name: String, p_msg: String) -
 func client_sent_msg(p_msg: String) -> void:
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
-	if plyr_node == null:
-		return
-	print("client: %s sent_msg: %s" % [plyr_node.display_name, p_msg])
+	if plyr_node == null: return
+	
 	sPlayerSentMsg.emit(plyr_node.display_name, p_msg)
 	# TODO Tell ClusterCore player sent message to distribute to other servers
 	# TODO log msg
+	#print("client: %s sent_msg: %s" % [plyr_node.display_name, p_msg])
 
 
 @rpc("authority", "reliable")
-func srvr_send_blocked_players(_blocked_plyrs: Array) -> void:
-	pass
+func srvr_send_blocked_players(_blocked_plyrs: Array) -> void: pass
 
 
 @rpc("authority")
-func srvr_send_msg(_from_plyr_display_name: String, _msg: String) -> void:
-	pass
+func srvr_send_msg(_from_plyr_display_name: String, _msg: String) -> void: pass

@@ -16,14 +16,13 @@ var _stop_listening: bool = true
 
 
 func _ready() -> void:
-	if CFG.sCfgChanged.connect(_change_cfg) != OK:
-		pass
-	if multiplayer.peer_connected.connect(_player_connected) != OK:
-		pass
-	if multiplayer.peer_disconnected.connect(_player_disconnected) != OK:
-		pass
-	if TimeLapse.sSecondLapsed.connect(_check_awaiting_login) != OK:
-		pass
+	if CFG.sCfgChanged.connect(_change_cfg) != OK: pass
+	
+	if multiplayer.peer_connected.connect(_player_connected) != OK: pass
+	
+	if multiplayer.peer_disconnected.connect(_player_disconnected) != OK: pass
+	
+	if TimeLapse.sOneSecondLapsed.connect(_check_awaiting_login) != OK: pass
 
 
 func _change_cfg() -> void:
@@ -39,6 +38,7 @@ func _change_cfg() -> void:
 	if base_port == null or base_port < 1024:
 		printerr("aConnectionIface.gd:_change_cfg() missing keys")
 		return
+	
 	_enet_port = base_port + CFG.server_id
 	_enet_max_conns = CFG.data.get("plyr_max_conns")
 	if _enet_max_conns == null or _enet_max_conns == 0:
@@ -52,7 +52,7 @@ func _change_cfg() -> void:
 func _check_awaiting_login() -> void:
 	var thr: Thread = Thread.new()
 	var err_code: Error = thr.start(_check_awaiting_login_thread.bind(thr))
-	if err_code != OK:
+	if err_code != OK: 
 		printerr("aConnectionIface._check_wating_thread start error code:" + str(err_code))
 
 
@@ -127,15 +127,14 @@ func _player_disconnected(p_peer_id: int) -> void:
 		return
 	var thr: Thread= Thread.new()
 	var err_code: Error = thr.start(_player_disconnected_thread.bind(plyr_node, thr))
-	if err_code != OK:
-		printerr("plyr disconnected thread start error, code:" + str(err_code))
+	if err_code != OK: printerr("plyr disconnected thread start error, code:" + str(err_code))
 
 
 func _player_disconnected_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
 	var plyr_id: int = p_plyr_node.plyr_id
 	var display_name: String = p_plyr_node.display_name
-	if plyrs_online.erase(plyr_id):
-		pass
+	if plyrs_online.erase(plyr_id): pass
+	
 	print("Plyr_id:%d, Display Name:%s disconnected!"% [plyr_id, display_name])
 	
 	p_plyr_node.remove_player(p_this_thread)
@@ -147,7 +146,7 @@ func _srvr_start() -> void:
 	var error: Error = _enet_srvr.create_server(_enet_port, _enet_max_conns)
 	if error != OK:
 		printerr("Can't create Enet Server with Error:", error)
-		await TimeLapse.sSecondLapsed
+		await TimeLapse.sOneSecondLapsed
 		call_deferred("_change_cfg")
 		return
 	
@@ -167,16 +166,14 @@ func client_cancel_match() -> void:
 
 @rpc("any_peer", "reliable")
 func client_request_match(p_side: DataTypes.PlaySides, p_type: DataTypes.MatchTypes ) -> void:
-	if p_side == DataTypes.PlaySides.NONE or p_type == DataTypes.MatchTypes.NONE:
-		return
+	if p_side == DataTypes.PlaySides.NONE or p_type == DataTypes.MatchTypes.NONE: return
 	
 	# We still add to the queue even if ONLY_PVE, in case of server overloading
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
 	var thr: Thread= Thread.new()
 	var err_code: Error = thr.start(_match_queue_add_plyr_thread.bind(plyr_node, thr))
-	if err_code != OK:
-		printerr("_match_queue_add_plyr_thread start error, code:" + str(err_code))
+	if err_code != OK: printerr("_match_queue_add_plyr_thread start error, code:" + str(err_code))
 
 
 # plyr connect credentials from gateway
@@ -222,10 +219,8 @@ func client_validate_token(p_token: String) -> void:
 
 
 @rpc("authority", "reliable")
-func server_validation_status(_code: int) -> void:
-	pass
+func server_validation_status(_code: int) -> void: pass
 
 
 @rpc("authority", "reliable")
-func server_status(_code: int) -> void:
-	pass
+func server_status(_code: int) -> void: pass
