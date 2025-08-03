@@ -22,16 +22,16 @@ enum StmtTypes {
 	SELECT
 }
 enum StmtIDs {
-	QRY_PLAYER_BY_ID,
-	CMD_INSERT_UPDATE_PLAYER,
-	CMD_UPDATE_PLAYER,
-	CMD_INSERT_MSG_BLOCK,
-	CMD_DELETE_MSG_BLOCK,
-	QRY_MSG_BLOCKED_DISPLAY_NAMES,
-	CMD_INSERT_PLYR_INTO_MATCH,
-	CMD_DELETE_PLYR_FROM_MATCH,
-	QRY_ALL_MATCHES,
-	QRY_MATCHES,
+	SELECT_PLAYER_BY_ID,
+	INSERT_OR_UPDATE_PLYR,
+	UPDATE_PLAYER,
+	INSERT_MSG_BLOCKED_PLYR,
+	DELETE_MSG_BLOCKED_PLYR,
+	SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES,
+	INSERT_PLYR_INTO_MATCH,
+	DELETE_PLYR_FROM_MATCH,
+	SELECT_ALL_MATCHES,
+	SELECT_MATCHES_BY_PLYR_SIDE_TYPE,
 }
 
 const kBufferConns: int = 2
@@ -39,37 +39,37 @@ const kDbConnTryMsec: int = 60000 # 1 min
 const kThreadLoopDelay: int = 17
 
 var prepared_statements: Dictionary = {
-	StmtIDs.QRY_PLAYER_BY_ID: {
+	StmtIDs.SELECT_PLAYER_BY_ID: {
 		StmtTypes.SELECT: "SELECT * FROM player WHERE id = ?;"},
-	StmtIDs.CMD_INSERT_UPDATE_PLAYER: {
+	StmtIDs.INSERT_OR_UPDATE_PLYR: {
 		StmtTypes.COMMAND: "INSERT INTO player SET id=?, display_name=?, status=? " +
 		"ON DUPLICATE KEY UPDATE status=VALUES(status);" },
-	StmtIDs.CMD_UPDATE_PLAYER: {
+	StmtIDs.UPDATE_PLAYER: {
 		StmtTypes.COMMAND: "UPDATE player SET status=?;"},
-	StmtIDs.CMD_INSERT_MSG_BLOCK: {
+	StmtIDs.INSERT_MSG_BLOCKED_PLYR: {
 		StmtTypes.COMMAND: "INSERT INTO msg_blocks (plyr_id, blocked_plyr_id) " +
 			"SELECT ?, id " +
 			"FROM player " +
 			"WHERE display_name=?;"},
-	StmtIDs.CMD_DELETE_MSG_BLOCK: {
+	StmtIDs.DELETE_MSG_BLOCKED_PLYR: {
 		StmtTypes.COMMAND: "DELETE FROM msg_blocks " +
 			"WHERE plyr_id=? " +
 			"AND blocked_plyr_id = ( " +
 				"SELECT id FROM player " +
 				"WHERE display_name=? );"},
-	StmtIDs.QRY_MSG_BLOCKED_DISPLAY_NAMES: {
+	StmtIDs.SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES: {
 		StmtTypes.SELECT: "SELECT p.display_name " +
 			"FROM msg_blocks mb " +
 			"JOIN player p ON p.id = mb.blocked_plyr_id " +
 			"WHERE mb.plyr_id=?;"},
-	StmtIDs.CMD_INSERT_PLYR_INTO_MATCH: {
+	StmtIDs.INSERT_PLYR_INTO_MATCH: {
 		StmtTypes.COMMAND: "INSERT INTO awaiting_match SET plyr_id=?, side=?, match_type=?;" },
-	StmtIDs.CMD_DELETE_PLYR_FROM_MATCH: {
+	StmtIDs.DELETE_PLYR_FROM_MATCH: {
 		StmtTypes.COMMAND: "DELETE FROM awaiting_match WHERE plyr_id=?;" },
-	StmtIDs.QRY_ALL_MATCHES: {
+	StmtIDs.SELECT_ALL_MATCHES: {
 		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
 			"ORDER BY dt ASC;" }, 
-	StmtIDs.QRY_MATCHES: {
+	StmtIDs.SELECT_MATCHES_BY_PLYR_SIDE_TYPE: {
 		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
 			"WHERE plyr_id != ? " + 
 				"AND match_type IN (?, ?) " +
@@ -109,48 +109,43 @@ func _exit_tree() -> void:
 	Utils.thread_wait_stop(_check_db_conns_thread)
 
 
-func do_threaded_cmd_task(
-		p_stmt_id: StmtIDs,
-		sql_params: Array[Dictionary],
-		p_qr: QueryResult,
-		p_this_thread: Thread
-	) -> void:
+func do_threaded_multitask(p_tasks: Array[DbTask], p_thread: Thread) -> int:
+	if p_thread == null:
+		return ERR_INVALID_PARAMETER
 	
-	if p_this_thread == null:
-		p_qr.err = -ERR_INVALID_PARAMETER
-		return
+	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
+	var db_conn: DbConn = DB.get_db_conn()
+	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
+	# Only call inside a thread or it will block main thread, use await inside main thread
+		OS.delay_msec(DB.kThreadLoopDelay) 
+		db_conn = DB.get_db_conn()
 	
-	var task: DbTask = DbTask.new(
-		p_stmt_id,
-		sql_params,
-		func(p_res: Dictionary) -> void:
-			p_qr.res = p_res, # You need a global container inside lambdas
-		func(p_err: int) -> void:
-			p_qr.err = p_err # You need a global container inside lambdas
-	)
-	_do_threaded_task(p_qr, task)
+	if db_conn == null:
+		return ERR_CANT_CONNECT
+	else:
+		db_conn.do_tasks(p_tasks)
+		db_conn = null
+	
+	return OK
 
 
-func do_threaded_select_task(
-		p_stmt_id: StmtIDs,
-		sql_params: Array[Dictionary],
-		p_qr: QueryResult,
-		p_this_thread: Thread
-	) -> void:
+func do_threaded_task(p_task: DbTask, p_thread: Thread) -> void:
+	if p_thread == null:
+		p_task.query_result.error = ERR_INVALID_PARAMETER
+		return 
 	
-	if p_this_thread == null:
-		p_qr.err = -ERR_INVALID_PARAMETER
-		return
+	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
+	var db_conn: DbConn = DB.get_db_conn()
+	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
+	# Only call inside a thread or it will block main thread, use await inside main thread
+		OS.delay_msec(DB.kThreadLoopDelay) 
+		db_conn = DB.get_db_conn()
 	
-	var task: DbTask = DbTask.new(
-		p_stmt_id,
-		sql_params,
-		func(p_res: Array[Dictionary]) -> void:
-			p_qr.rows = p_res, # You need a global container inside lambdas
-		func(p_err: int) -> void:
-			p_qr.err = p_err # You need a global container inside lambdas
-	)
-	_do_threaded_task(p_qr, task)
+	if db_conn == null:
+		p_task.query_result.error =  ERR_CANT_CONNECT
+	else:
+		db_conn.do_task(p_task)
+		db_conn = null
 
 
 func get_db_conn() -> DbConn:
@@ -244,22 +239,6 @@ func _check_conns_thread_func() -> void:
 		_check_db_conns_sema.wait()
 
 
-func _do_threaded_task(p_qr: QueryResult, p_task: DbTask) -> void:
-	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
-	var db_conn: DbConn = DB.get_db_conn()
-	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
-	# Only call inside a thread or it will block main thread, use await inside main thread
-		OS.delay_msec(DB.kThreadLoopDelay) 
-		db_conn = DB.get_db_conn()
-	
-	if db_conn == null:
-		p_qr.err = MariaDBConnector.ErrorCode.ERR_NOT_CONNECTED
-	else:
-		db_conn.do_tasks([p_task])
-		db_conn.issued = false
-		db_conn = null
-
-
 func _on_check_db_conns() -> void:
 	_check_db_conns_sema.post()
 
@@ -276,8 +255,7 @@ func _setup_db_ctx() -> void:
 
 
 func _set_prepared_statements(_val: Dictionary) -> void:
-	print("_set_prepared_statements")
-	#prepared_statements = p_val
+	printerr("invalid setter call on DB.prepared_statements")
 
 
 func _test_game_db() -> void:

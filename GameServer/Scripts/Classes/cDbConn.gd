@@ -61,35 +61,97 @@ func add_prepared_stmt(p_glb_id: int, p_stmt: String, p_overwrite:bool = false) 
 	_prep_stmts[p_glb_id] = status["statement_id"]
 
 
-func do_cmd(p_stmt: String) -> Dictionary:
+func do_command_stmt(p_stmt: String) -> Dictionary:
+	if not issued:
+		_set_issued(true)
+	_last_active_msec = Time.get_ticks_msec()
+	_busy = true
 	var result: Dictionary = _db_conn.execute_command(p_stmt)
 	last_error = _db_conn.last_error
+	_busy = false
+	if issued:
+		_set_issued(false)
 	return result
 
 
-func do_query(p_stmt: String) -> Array[Dictionary]:
+func do_command_stmt_continue(p_stmt: String) -> Dictionary:
+	if not issued:
+		_set_issued(true)
+	_last_active_msec = Time.get_ticks_msec()
+	_busy = true
+	var result: Dictionary = _db_conn.execute_command(p_stmt)
+	last_error = _db_conn.last_error
+	_busy = false
+	return result
+
+
+func do_select_stmt(p_stmt: String) -> Array[Dictionary]:
+	if not issued:
+		_set_issued(true)
+	_last_active_msec = Time.get_ticks_msec()
+	_busy = true
 	var result: Array[Dictionary] = _db_conn.select_query(p_stmt)
 	last_error = _db_conn.last_error
+	_busy = false
+	if issued:
+		_set_issued(false)
 	return result
+
+
+func do_select_stmt_continue(p_stmt: String) -> Array[Dictionary]:
+	if not issued:
+		_set_issued(true)
+	_last_active_msec = Time.get_ticks_msec()
+	_busy = true
+	var result: Array[Dictionary] = _db_conn.select_query(p_stmt)
+	last_error = _db_conn.last_error
+	_busy = false
+	return result
+
+
+func do_task(p_task: DbTask) -> void:
+	do_task_continue(p_task)
+	if issued:
+		_set_issued(false)
+
+
+func do_task_continue(p_task: DbTask) -> void:
+	if not issued:
+		_set_issued(true)
+	if not _check_task(p_task):
+		return
+	_do_task(p_task)
 
 
 func do_tasks(p_tasks: Array[DbTask]) -> void:
-	issued = true
-	_busy = true
-	for task:DbTask in p_tasks:
-		if _prep_stmts.has(task.stmt_glb_id):
-			if DB.prepared_statements.has(task.stmt_glb_id):
-				var stmt_d: Dictionary = DB.prepared_statements[task.stmt_glb_id]
-				if not stmt_d.is_empty():
-					var stmt_type: DB.StmtTypes = stmt_d.keys()[0]
-					if stmt_type == DB.StmtTypes.SELECT:
-						_do_query(task)
-					elif stmt_type == DB.StmtTypes.COMMAND:
-						_do_cmd(task)
-		else:
-			printerr("DbPrep", self, "Missing Global STMT ID:", task.stmt_glb_id)
-	_busy = false
+	do_tasks_continue(p_tasks)
+	if issued:
+		_set_issued(false)
+
+
+func do_tasks_continue(p_tasks: Array[DbTask]) -> void:
+	if not issued:
+		_set_issued(true)
+	for task: DbTask in p_tasks:
+		do_task_continue(task)
+
+
+func _check_task(p_task: DbTask) -> bool:
 	_last_active_msec = Time.get_ticks_msec()
+	if p_task.params.is_empty():
+		printerr("DbTask missing params")
+		return false
+	if p_task.query_result == null:
+		printerr("DbTask QueryResult not initialized")
+		return false
+	if not _prep_stmts.has(p_task.stmt_glb_id):
+		printerr("DbConn:", self, " Missing Statement for Global DB Stmt ID:", p_task.stmt_glb_id)
+		return false
+	
+	if not DB.prepared_statements.has(p_task.stmt_glb_id):
+		printerr("DbConn Error - Missing Global DB STMT ID:", p_task.stmt_glb_id)
+		return false
+	return true
 
 
 func _connect_signal() -> void:
@@ -99,33 +161,29 @@ func _connect_signal() -> void:
 		printerr(self, "Can not connect to TimeLapse.sFiveSecondsLapsed")
 
 
-func _do_callable(callable: Callable, arg: Variant = null) -> void:
-	if callable.is_null():
-		return
-
-	if callable.get_argument_count() == 0:
-		callable.call()
-	else:
-		callable.call(arg)
-
-
-func _do_cmd(p_task: DbTask) -> void:
+func _do_prepared_cmd(p_task: DbTask) -> void:
 	var db_conn_stmt_id: int = _prep_stmts[p_task.stmt_glb_id]
-	var res: Dictionary = _db_conn.prep_stmt_exec_cmd(db_conn_stmt_id, p_task.params)
-	if _db_conn.last_error == MariaDBConnector.ErrorCode.OK:
-		_do_callable(p_task.success_func, res)
-	else:
-		_do_callable(p_task.fail_func, _db_conn.last_error)
+	p_task.query_result.cmd_res = _db_conn.prep_stmt_exec_cmd(db_conn_stmt_id, p_task.params)
+	# Have to run the exec before checking MariaDBConnector.last_error
+	p_task.query_result.error = _db_conn.last_error
 
 
-func _do_query(p_task: DbTask) -> void:
+func _do_prepared_select(p_task: DbTask) -> void:
 	var db_conn_stmt_id: int = _prep_stmts[p_task.stmt_glb_id]
-	var res: Array[Dictionary] = _db_conn.prep_stmt_exec_select(db_conn_stmt_id, p_task.params)
-	if _db_conn.last_error == MariaDBConnector.ErrorCode.OK:
-		_do_callable(p_task.success_func, res)
-	else:
-		_do_callable(p_task.fail_func, _db_conn.last_error)
+	p_task.query_result.select_res = _db_conn.prep_stmt_exec_select(db_conn_stmt_id, p_task.params)
+	# Have to run the exec before checking MariaDBConnector.last_error
+	p_task.query_result.error = _db_conn.last_error
 
+
+func _do_task(p_task: DbTask) -> void:
+	_busy = true
+	var stmt: Dictionary = DB.prepared_statements[p_task.stmt_glb_id]
+	var stmt_type: DB.StmtTypes = stmt.keys()[0]
+	if stmt_type == DB.StmtTypes.SELECT:
+		_do_prepared_select(p_task)
+	elif stmt_type == DB.StmtTypes.COMMAND:
+		_do_prepared_cmd(p_task)
+	_busy = false
 
 func _set_issued(p_issued: bool) -> void:
 	issued = p_issued

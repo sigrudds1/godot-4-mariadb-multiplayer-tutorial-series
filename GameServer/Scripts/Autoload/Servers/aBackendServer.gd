@@ -1,7 +1,7 @@
 # "res://script_templates/Node/minimal.gd"
 extends Node
 
-enum eFuncCode {
+enum FuncCode {
 	CREATE_ACCOUNT = 1,
 	CHANGE_PASSWORD,
 	CONNECT_PLYR,
@@ -14,7 +14,7 @@ const kExpireMsec: int = 20000
 const kTcpFlushDelay: int = 50
 
 var func_lookup: Dictionary = {
-	eFuncCode.CONNECT_PLYR: Callable(self, "_connect_player")
+	FuncCode.CONNECT_PLYR: Callable(self, "_connect_player")
 }
 
 var _stop_listening: bool = false

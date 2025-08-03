@@ -75,25 +75,34 @@ func _match_queue_add_plyr_thread(
 		p_this_thread: Thread
 	) -> void:
 	
-	var stmt_id: DB.StmtIDs = DB.StmtIDs.CMD_INSERT_PLYR_INTO_MATCH
+	var stmt_id: DB.StmtIDs = DB.StmtIDs.INSERT_PLYR_INTO_MATCH
 	var sql_params: Array[Dictionary] = [
 		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id},
 		{MariaDBConnector.FT_TINYINT_U: p_side},
 		{MariaDBConnector.FT_TINYINT_U: p_match_type}
 	]
 	var qr: QueryResult = QueryResult.new()
-	DB.do_threaded_cmd_task(stmt_id, sql_params, qr, p_this_thread)
+	DB.do_threaded_task(DbTask.new(stmt_id, sql_params, qr), p_this_thread)
+	if qr.error != MariaDBConnector.ErrorCode.OK:
+		printerr("Error adding plyr %d:%s to match! with error_code:%d!" % [
+			p_plyr_node.plyr_id, p_plyr_node.display_name, qr.error
+		])
 
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _match_queue_remove_plyr_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
-	var stmt_id: DB.StmtIDs = DB.StmtIDs.CMD_DELETE_PLYR_FROM_MATCH
+	var stmt_id: DB.StmtIDs = DB.StmtIDs.DELETE_PLYR_FROM_MATCH
 	var sql_params: Array[Dictionary] = [
 		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id}
 	]
 	var qr: QueryResult = QueryResult.new()
-	DB.do_threaded_cmd_task(stmt_id, sql_params, qr, p_this_thread)
+	DB.do_threaded_task(DbTask.new(stmt_id, sql_params, qr), p_this_thread)
+	if qr.error != MariaDBConnector.ErrorCode.OK:
+		printerr("Error removing plyr %d:%s from match with error_code:%d!" % [
+			p_plyr_node.plyr_id, p_plyr_node.display_name, qr.error
+		])
+
 	
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
@@ -125,11 +134,12 @@ func _player_disconnected(p_peer_id: int) -> void:
 func _player_disconnected_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
 	var plyr_id: int = p_plyr_node.plyr_id
 	var display_name: String = p_plyr_node.display_name
-	if plyrs_online.erase(p_plyr_node.plyr_id):
+	if plyrs_online.erase(plyr_id):
 		pass
 	print("Plyr_id:%d, Display Name:%s disconnected!"% [plyr_id, display_name])
 	
 	p_plyr_node.remove_player(p_this_thread)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _srvr_start() -> void:
