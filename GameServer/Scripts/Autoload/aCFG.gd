@@ -53,6 +53,10 @@ func _physics_process(p_delta: float) -> void:
 		_get_cfg()
 
 
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST  :
+		print("exiting")
+
 func _get_cfg() -> void:
 	# Export folder contains all the items needd to be included with project export,
 	#	 but not included in the pck.

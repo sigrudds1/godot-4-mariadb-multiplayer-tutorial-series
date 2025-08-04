@@ -12,19 +12,24 @@ func _ready() -> void:
 		pass
 	
 	var err_code: Error = _match_thread.start(_awaiting_match_thread_func.bind(_match_thread))
-	if err_code != OK:
+	if err_code != OK: 
 		printerr("MessageIface _block_plyer_thread start error code:" + str(err_code))
 
 
 func _exit_tree() -> void:
+	print("MatchController _exit_tree")
 	_running = false
+	await Signal(Engine.get_main_loop(), "physics_frame")
 	_match_semaphore.post()
+	await Signal(Engine.get_main_loop(), "physics_frame")
 
 
 func _awaiting_match_thread_func(p_this_thread: Thread) -> void:
 	while _running:
 		_match_semaphore.wait()
+		OS.delay_msec(33)
 	
+	print("_awaiting_match_thread_func, exiting")
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 

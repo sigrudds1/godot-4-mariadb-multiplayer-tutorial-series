@@ -32,6 +32,9 @@ enum StmtIDs {
 	DELETE_PLYR_FROM_MATCH,
 	SELECT_ALL_MATCHES,
 	SELECT_MATCHES_BY_PLYR_SIDE_TYPE,
+	SELECT_PLYR_INVENTORY,
+	#UPDATE_PLYR_INVENTORY,
+	#DELETE_PLYR_INVENTORY
 }
 
 const kBufferConns: int = 2
@@ -70,11 +73,21 @@ var prepared_statements: Dictionary = {
 		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
 			"ORDER BY dt ASC;" }, 
 	StmtIDs.SELECT_MATCHES_BY_PLYR_SIDE_TYPE: {
-		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
+		StmtTypes.SELECT: 
+			"SELECT * FROM awaiting_match " +
 			"WHERE plyr_id != ? " + 
 				"AND match_type IN (?, ?) " +
 				"AND side IN (?, ?, ?) " +
-			"ORDER BY dt ASC, match_type ASC, side ASC;" }, 
+			"ORDER BY dt ASC, match_type ASC, side ASC;"
+	}, 
+	StmtIDs.SELECT_PLYR_INVENTORY: {
+		StmtTypes.SELECT:
+			"SELECT inv.item_id, itm.ref_id, inv.qty, istat.stat_id, istat.value " +
+			"FROM inventory AS inv " +
+			"JOIN items AS itm ON inv.item_id = itm.id " +
+			"LEFT JOIN item_stats AS istat ON inv.item_id = istat.item_id " +
+			"WHERE inv.plyr_id = ?;"
+	},
 }: set = _set_prepared_statements
 
 var _db_ctx: MariaDBConnectContext = MariaDBConnectContext.new()
@@ -98,9 +111,11 @@ func _ready() -> void:
 	
 	var error: int = _check_db_conns_thread.start(_check_conns_thread_func)
 	if error != OK: printerr("Starting _check_db_conns_thread error with ", error)
+	
 
 
 func _exit_tree() -> void:
+	print("DB _exit_tree")
 	_srvr_running = false
 	_check_db_conns_sema.post()
 	Utils.thread_wait_stop(_check_db_conns_thread)

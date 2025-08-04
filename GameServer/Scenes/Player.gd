@@ -105,7 +105,6 @@ func _update_db() -> void:
 
 
 func _update_db_blocked_plyrs(p_thread: Thread) -> void:
-	print("_update_db_blocked_plyrs")
 	if p_thread == null: return
 	
 	var db_del_params_list: Array = []
@@ -178,7 +177,6 @@ func _update_db_thread_func(p_this_thread: Thread, p_update_state: UpdateStates)
 
 
 func _update_plyr_status(p_thread: Thread) -> void:
-	print("_update_plyr_status")
 	if p_thread == null: return
 	
 	var stmt_id: DB.StmtIDs = DB.StmtIDs.INSERT_OR_UPDATE_PLYR
