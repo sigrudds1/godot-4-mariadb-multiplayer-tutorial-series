@@ -19,9 +19,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	print("MatchController _exit_tree")
 	_running = false
-	await Signal(Engine.get_main_loop(), "physics_frame")
 	_match_semaphore.post()
-	await Signal(Engine.get_main_loop(), "physics_frame")
 
 
 func _awaiting_match_thread_func(p_this_thread: Thread) -> void:
