@@ -17,5 +17,5 @@
 	"gateway_backend_port": 60000,
 	"plyr_conn_timeout": 2000,
 	"plyr_base_port": 62000,
-	"plyr_max_conns": 1000,
+	"plyr_max_conns": 1000
 }

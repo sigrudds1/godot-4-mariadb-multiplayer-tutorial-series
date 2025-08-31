@@ -18,6 +18,6 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-CFG="*res://Scripts/Autoload/aCFG.gd"
+Cfg="*res://Scripts/Autoload/aCfg.gd"
 Sanitize="*res://Scripts/Autoload/aSanitize.gd"
 TimeLapse="*res://Scripts/Autoload/aTimeLapse.gd"

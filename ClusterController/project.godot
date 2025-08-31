@@ -1,0 +1,22 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Multiplayer Tutorial Cluster Controller"
+config/tags=PackedStringArray("multiplayer", "tutorial")
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+TimeLapse="*res://Scripts/Autoload/aTimeLapse.gd"
+Cfg="*res://Scripts/Autoload/aCfg.gd"
+Db="*res://Scripts/Autoload/aDb.gd"

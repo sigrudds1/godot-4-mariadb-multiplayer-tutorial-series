@@ -73,7 +73,7 @@ var _stop: bool = false
 
 
 func _ready() -> void:
-	CFG.sChanged.connect(_change_cfg)
+	Cfg.sChanged.connect(_change_cfg)
 
 
 func _process(_delta: float) -> void:
@@ -156,22 +156,22 @@ func _test_login_thread(p_this_thread: Thread = null) -> void:
 
 # SRVR CODE
 func _change_cfg() -> void:
-	if !CFG.data.has_all(CFG.kCfgJsonKeys):
+	if not Cfg.data.has_all(Cfg.kCfgJsonKeys):
 		printerr("res://GatewayServer.gd:_change_cfg() missing keys")
 		await get_tree().create_timer(1.0).timeout
 		call_deferred("_change_cfg")
 		return
 	
 	_stop = true
-	_auth_srvr_url = CFG.data["auth_server_url"]
-	_auth_srvr_port = CFG.data["auth_server_port"]
+	_auth_srvr_url = Cfg.data["auth_server_url"]
+	_auth_srvr_port = Cfg.data["auth_server_port"]
 	# We will keep a list of game servers and gateway association in the auth DB, for now just 1
-	_game_srvr_be_port = CFG.data["game_server_backend_port"]
-	_game_srvr_be_url = CFG.data["game_server_backend_url"]
-	_game_srvr_url = CFG.data["game_server_url"]
-	_game_srvr_port = CFG.data["game_server_port"]
-	_tcp_port = CFG.data["gw_listen_port"]
-	_tcp_max_conns = CFG.data["gw_max_conns"]
+	_game_srvr_be_port = Cfg.data["game_server_backend_port"]
+	_game_srvr_be_url = Cfg.data["game_server_backend_url"]
+	_game_srvr_url = Cfg.data["game_server_url"]
+	_game_srvr_port = Cfg.data["game_server_port"]
+	_tcp_port = Cfg.data["gw_listen_port"]
+	_tcp_max_conns = Cfg.data["gw_max_conns"]
 	_srvr_start()
 	_stop = false
 	
@@ -186,7 +186,7 @@ func _chk_incomming() -> void:
 	if _tcp_srvr.is_connection_available():
 		var tcp_peer: StreamPeerTCP = _tcp_srvr.take_connection()
 		print("tcp_peer", tcp_peer)
-		if _tls_active_conns < CFG.data["gw_max_conns"]:
+		if _tls_active_conns < Cfg.data["gw_max_conns"]:
 			var thr := Thread.new()
 			var err: int = thr.start(_tcp_thread.bind(tcp_peer, thr))
 			if err != OK:
@@ -329,7 +329,7 @@ func _send_tls_peer_code(p_plyr_tls_peer: StreamPeerTLS,
 
 
 func _srvr_start() -> void:
-	if !CFG.data.has_all(CFG.kCfgJsonKeys):
+	if !Cfg.data.has_all(Cfg.kCfgJsonKeys):
 		return
 	
 	if _tcp_srvr == null:
@@ -348,7 +348,7 @@ func _srvr_start() -> void:
 # First 2 bytes are the function, see functions for coding
 func _tcp_thread(p_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	var tls_peer := StreamPeerTLS.new()
-	var tls_err: int =  tls_peer.accept_stream(p_peer, CFG.tls_server_opts)
+	var tls_err: int =  tls_peer.accept_stream(p_peer, Cfg.tls_server_opts)
 	if tls_err != OK:
 		printerr("_tcp_thread TLS err:", tls_err)
 		Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)

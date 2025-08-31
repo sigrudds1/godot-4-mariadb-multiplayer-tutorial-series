@@ -5,6 +5,9 @@ error=0
 srvr_name=$2
 
 GODOT_BIN="$HOME/dev/GodotEngine-Builds/Godot_v4.4.1-stable_linux.x86_64"
+
+CUR_DIR=$(pwd)
+
 help() {
 	echo "Usage:"
 	echo "start_servers_projects.sh help"
@@ -121,6 +124,9 @@ case "$1" in
         error=1
         ;;
 esac
+
+cd "$CUR_DIR"
+
 if [[ "$error" == 1 ]]; then
 	help
 fi

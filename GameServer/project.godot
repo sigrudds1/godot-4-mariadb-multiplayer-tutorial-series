@@ -27,7 +27,6 @@ BackendServer="*res://Scripts/Autoload/Servers/aBackendServer.gd"
 ConnectionIface="*res://Scripts/Autoload/RPC/aConnectionIface.gd"
 InventoryIface="*res://Scripts/Autoload/RPC/aInventoryIface.gd"
 MessagingIface="*res://Scripts/Autoload/RPC/aMessagingIface.gd"
-MatchController="*res://Scripts/Autoload/aMatchController.gd"
 
 [debug]
 

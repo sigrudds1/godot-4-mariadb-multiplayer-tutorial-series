@@ -1,0 +1,16 @@
+{
+	"port": 62000,
+	"bind_address": "*",
+	"max_conns": 50,
+	"conn_timeout": 2000,
+	"db_conn_timeout": 2000,
+	"db_buffer_conns": 10,
+	"db_url": "127.0.0.1",
+	"db_max_conns": 50,
+	"db_name": "GameSrvrTemplate",
+	"db_port": 3306,
+	"db_user": "game_server_user",
+	"db_pwd_plain": "secret",
+	"db_pwd_sha512": "bd2b1aaf7ef4f09be9f52ce2d8d599674d81aa9d6a4421696dc4d93dd0619d682ce56b4d64a9ef097761ced99e0f67265b5f76085e5b0ee7ca4696b2ad6fe2b2",
+	"db_pwd_sha512_to_b64": "vSsar3708Jvp9Szi2NWZZ02Bqp1qRCFpbcTZPdBhnWgs5WtNZKnvCXdhztmeD2cmW192CF5bDufKRpayrW/isg==",
+}

@@ -3,7 +3,7 @@ class_name NetTool extends Node
 
 static func tls_client_connect(p_tcp_peer: StreamPeerTCP, p_timeout: int = 2000) -> StreamPeerTLS:
 	var tls_peer := StreamPeerTLS.new()
-	var err = tls_peer.connect_to_stream(p_tcp_peer, "", CFG.tls_client_opt)
+	var err = tls_peer.connect_to_stream(p_tcp_peer, "", Cfg.tls_client_opt)
 	if err:
 		printerr("TLS connection error:", err)
 		tls_peer = null

@@ -12,14 +12,13 @@ enum UpdateStates {
 	DISCONNECT
 }
 
-
 var peer_id: int
 var plyr_id: int
 var display_name: String = ""
 
 var inventory: Dictionary = {}
 
-var match_state: DataTypes.PlayerMatchStates = DataTypes.PlayerMatchStates.IDLE
+var match_state: Match.PlayerStates = Match.PlayerStates.IDLE
 # TODO when player is awaiting or playing a match do not allow match setup changes
 
 var _connection_state: ConnectionStates =  ConnectionStates.ONLINE
@@ -56,7 +55,7 @@ func remove_msg_blocked_plyr(p_plyr_dname: String) -> void:
 func remove_player(p_thread: Thread) -> void:
 	_connection_state = ConnectionStates.OFFLINE
 	_update_db_thread_func(p_thread, UpdateStates.DISCONNECT)
-	queue_free()
+	queue_free() 
 
 
 func _fetch_db_blocked_plyrs(p_thread: Thread) -> Array[Dictionary]:

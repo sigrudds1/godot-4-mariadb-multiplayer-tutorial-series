@@ -1,28 +1,6 @@
 # Autoload DataTypes
 extends Node
 
-enum MatchTypes {
-	NONE,
-	ONLY_PVE,
-	ONLY_PVP,
-	TRY_PVP,
-}
-
-enum PlaySides{
-	NONE,
-	ONLY_TANKS,
-	ONLY_TOWERS,
-	PREFER_TANKS,
-	PREFER_TOWERS,
-	ANY
-}
-
-enum PlayerMatchStates {
-	IDLE,
-	WAITING,
-	PLAYING
-}
-
 # THINKING OUTLOUD
 enum TargetingModes{ # Server data key - TM
 	NONE,

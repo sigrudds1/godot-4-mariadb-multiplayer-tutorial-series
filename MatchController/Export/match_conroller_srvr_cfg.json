@@ -1,0 +1,5 @@
+{
+	"listen_port": 62200,
+	"max_conns": 20,
+	"conn_timeout": 2000,
+}

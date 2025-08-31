@@ -69,40 +69,20 @@ func _check_awaiting_login_thread(p_this_thread: Thread) -> void:
 
 
 func _match_queue_add_plyr_thread(
-		p_plyr_node: Player,
-		p_side: int, 
-		p_match_type: int, 
-		p_this_thread: Thread
-	) -> void:
+	p_plyr: Player,
+	p_side: int,
+	p_match_type: int, 
+	p_this_thread: Thread
+) -> void:
 	
-	var stmt_id: DB.StmtIDs = DB.StmtIDs.INSERT_PLYR_INTO_MATCH
-	var sql_params: Array[Dictionary] = [
-		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id},
-		{MariaDBConnector.FT_TINYINT_U: p_side},
-		{MariaDBConnector.FT_TINYINT_U: p_match_type}
-	]
-	var qr: QueryResult = QueryResult.new()
-	DB.do_threaded_task(DbTask.new(stmt_id, sql_params, qr), p_this_thread)
-	if qr.error != MariaDBConnector.ErrorCode.OK:
-		printerr("Error adding plyr %d:%s to match! with error_code:%d!" % [
-			p_plyr_node.plyr_id, p_plyr_node.display_name, qr.error
-		])
-
+	
+	# Contact match controller and add player
+	
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _match_queue_remove_plyr_thread(p_plyr_node: Player, p_this_thread: Thread) -> void:
-	var stmt_id: DB.StmtIDs = DB.StmtIDs.DELETE_PLYR_FROM_MATCH
-	var sql_params: Array[Dictionary] = [
-		{MariaDBConnector.FT_INT_U: p_plyr_node.plyr_id}
-	]
-	var qr: QueryResult = QueryResult.new()
-	DB.do_threaded_task(DbTask.new(stmt_id, sql_params, qr), p_this_thread)
-	if qr.error != MariaDBConnector.ErrorCode.OK:
-		printerr("Error removing plyr %d:%s from match with error_code:%d!" % [
-			p_plyr_node.plyr_id, p_plyr_node.display_name, qr.error
-		])
-
+	# Contact match controller and remove player, single server match controlelr is singelton
 	
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
@@ -158,6 +138,7 @@ func _srvr_start() -> void:
 func client_cancel_match() -> void:
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
+	
 	var thr: Thread= Thread.new()
 	var err_code: Error = thr.start(_match_queue_remove_plyr_thread.bind(plyr_node, thr))
 	if err_code != OK:
@@ -165,14 +146,24 @@ func client_cancel_match() -> void:
 
 
 @rpc("any_peer", "reliable")
-func client_request_match(p_side: DataTypes.PlaySides, p_type: DataTypes.MatchTypes ) -> void:
-	if p_side == DataTypes.PlaySides.NONE or p_type == DataTypes.MatchTypes.NONE: return
+func client_request_match(p_side: Match.Sides, p_type: Match.Types) -> void:
+	if p_side == Match.Sides.NONE or p_type == Match.Types.NONE: return
 	
 	# We still add to the queue even if ONLY_PVE, in case of server overloading
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	var plyr_node: Player = _main_node.get_node_or_null("plyr_" + str(peer_id))
+	print("client_request_match side:%d, type:%d, plyr:%s" % [p_side, p_type, plyr_node])
+	
 	var thr: Thread= Thread.new()
-	var err_code: Error = thr.start(_match_queue_add_plyr_thread.bind(plyr_node, thr))
+	var err_code: Error = thr.start(
+		_match_queue_add_plyr_thread.bind(
+			plyr_node, 
+			p_side, 
+			p_type, 
+			thr
+		)
+	)
+	
 	if err_code != OK: printerr("_match_queue_add_plyr_thread start error, code:" + str(err_code))
 
 

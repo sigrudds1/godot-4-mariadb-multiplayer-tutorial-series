@@ -1,6 +1,12 @@
 # "res://Scripts/Autoload/aDB.gd"
+
+# This handles all connections to the game server db, if more than one game server is needed, then
+#	a db controller server that mainatins all the connections to the db isneeded, the game servers
+#	will have to run requests thru that controller, this will be done when I get to scaling and 
+#	migrate the DB autoload to connect to a db Controller server.
+
 # NOTE - See the game_srvr_cfg.json, this examples db plain password is "secret" and is hashed with
-#	SHA512, not to	be confused with SHA512/224, SHA512/256, SHA3-512, the MariaDB server user
+#	SHA512, not to	be confused with SHA512/224, SHA512/256, or SHA3-512, the MariaDB server user
 #	is configured using ED25519 plugin, see the included GameSrvrSetup.sql file for installation.
 # The MariaDB addon will except the SHA512 hash because in the steps for authetication via ed25519
 #	it hashes the password via SHA512 in several stages before signing, the first time is just
@@ -13,6 +19,13 @@
 #	We have a limited number of connection in the pool, so connections have to be ran in threads 
 #	or we will get blocking while the request is waiting for a db connection to free; even though 
 #	queries are fast we could get a race condition that arrives to a stalemate and locks the server.
+
+# DECIMCAL(M,D) lookup
+#	Storage 0 digits = 0 bytes, 1–2 = 1 byte, 3–4 = 2 bytes, 5–6 = 3 bytes, 7–9 = 4 bytes
+#	any more digits it is just a repeat, 11 digits = 9(4  bytes) + 1-2( 1 byte) = 5 bytes
+#	each side of the decimal point is stored separately, left side digits are is M - D,
+#	full bytes are recommended so each side should be 0,2,4,6, 9 or 9 + 2,4,6,9 ... digits 
+#	123456789012345.12 = Decimal(17,2) = 8 bytes, 1234.1234 = DECIMAL(8,4) = 4 bytes 
 extends Node
 
 signal sDbConnsChanged
@@ -37,7 +50,7 @@ enum StmtIDs {
 	#DELETE_PLYR_INVENTORY
 }
 
-const kBufferConns: int = 2
+const kBufferConns: int = 10
 const kDbConnTryMsec: int = 60000 # 1 min
 const kThreadLoopDelay: int = 17
 
@@ -80,14 +93,15 @@ var prepared_statements: Dictionary = {
 				"AND side IN (?, ?, ?) " +
 			"ORDER BY dt ASC, match_type ASC, side ASC;"
 	}, 
-	StmtIDs.SELECT_PLYR_INVENTORY: {
-		StmtTypes.SELECT:
-			"SELECT inv.item_id, itm.ref_id, inv.qty, istat.stat_id, istat.value " +
-			"FROM inventory AS inv " +
-			"JOIN items AS itm ON inv.item_id = itm.id " +
-			"LEFT JOIN item_stats AS istat ON inv.item_id = istat.item_id " +
-			"WHERE inv.plyr_id = ?;"
-	},
+	# COMMENTED OUT, still working on item schema, so this breaks on adding prepared stmts
+	#StmtIDs.SELECT_PLYR_INVENTORY: {
+		#StmtTypes.SELECT:
+			#"SELECT inv.item_id, itm.ref_id, inv.qty, istat.stat_id, istat.value " +
+			#"FROM inventory AS inv " +
+			#"JOIN items AS itm ON inv.item_id = itm.id " +
+			#"LEFT JOIN item_stats AS istat ON inv.item_id = istat.item_id " +
+			#"WHERE inv.plyr_id = ?;"
+	#},
 }: set = _set_prepared_statements
 
 var _db_ctx: MariaDBConnectContext = MariaDBConnectContext.new()
@@ -99,7 +113,6 @@ var _db_conn_issued_bfr_mutex: Mutex = Mutex.new()
 var _srvr_change_cfg: bool = true
 var _srvr_running: bool = true
 var _check_db_conns_sema: Semaphore = Semaphore.new()
-var _check_db_conns_thread: Thread = Thread.new()
 
 
 func _ready() -> void:
@@ -109,16 +122,16 @@ func _ready() -> void:
 	
 	if sDbConnsChanged.connect(_on_check_db_conns) != OK: pass
 	
-	var error: int = _check_db_conns_thread.start(_check_conns_thread_func)
+	var thr: Thread = Thread.new()
+	var error: Error = thr.start(_check_conns_thread_func.bind(thr))
 	if error != OK: printerr("Starting _check_db_conns_thread error with ", error)
 	
 
 
 func _exit_tree() -> void:
-	print("DB _exit_tree")
+	#print("DB _exit_tree")
 	_srvr_running = false
 	_check_db_conns_sema.post()
-	Utils.thread_wait_stop(_check_db_conns_thread)
 
 
 func do_threaded_multitask(p_tasks: Array[DbTask], p_thread: Thread) -> int:
@@ -197,7 +210,7 @@ func _change_cfg() -> void:
 
 
 # Only run with signals so it will only run when ready and not block main loop
-func _check_conns_thread_func() -> void:
+func _check_conns_thread_func(p_this_thread: Thread) -> void:
 	while _srvr_running:
 		_db_conn_bfr_mutex.lock()
 		for i:int in range(_db_conn_bfr.size() - 1, -1, -1):
@@ -247,6 +260,8 @@ func _check_conns_thread_func() -> void:
 				break_msec = Time.get_ticks_msec() + 1000
 		
 		_check_db_conns_sema.wait()
+	
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _on_check_db_conns() -> void:
