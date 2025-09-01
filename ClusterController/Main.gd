@@ -2,16 +2,22 @@
 extends Node
 
 enum FuncCode {
-	ONE,
-	TWO
+	DB_INSERT_OR_UPDATE_PLYR,
+	DB_INSERT_MSG_BLOCKED_PLYR,
+	DB_DELETE_MSG_BLOCKED_PLYR,
+	DB_SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES,
+	#DB_SELECT_PLYR_INVENTORY,
+	#DB_UPDATE_PLYR_INVENTORY,
+	#DB_DELETE_FROM_PLYR_INVENTORY,
+	ADD_PLYR_TO_MATCH_QUEUE,
+	DELETE_PLYR_FROM_MATCH_QUEUE,
 }
 
 const kExpireMsec: int = 20000
 const kTcpFlushDelay: int = 50
 
 var func_lookup: Dictionary = {
-	FuncCode.ONE: Callable(self, "_func_one"),
-	FuncCode.TWO: Callable(self, "_func_two")
+	FuncCode.DB_INSERT_OR_UPDATE_PLYR: Callable(self, "insert_or_update_plyr"),
 }
 
 var _listening: bool = false
@@ -29,6 +35,7 @@ func _ready() -> void:
 	if Cfg.sCfgChanged.connect(_change_cfg): pass
 	_listening = true
 
+
 # Using _process to poll as fast as posible
 func _process(_delta: float) -> void:
 	if not _listening:
@@ -45,6 +52,12 @@ func _exit_tree() -> void:
 	_listening = false
 	_running = false
 	_semephore.post()
+
+
+func insert_or_update_plyr(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
+	var plyr_id: int = p_tcp_peer.get_u32()
+	print("insert_or_update_plyr plyr_id:", plyr_id)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _change_cfg() -> void:
@@ -79,15 +92,10 @@ func _chk_incomming() -> void:
 			var err_code: Error = thr.start(_tcp_thread.bind(tcp_peer, thr))
 			if err_code != OK:
 				printerr("srvr thread start error code:" + str(err_code))
+				# TODO - Send error to client
 				tcp_peer = NetTool.tcp_disconnect(tcp_peer)
 		else:
 			tcp_peer = NetTool.tcp_disconnect(tcp_peer)
-
-
-func _func_one(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
-	var plyr_id: int = p_tcp_peer.get_u32()
-	print("_func_one plyr_id:", plyr_id)
-	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 
 
 func _func_two(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:

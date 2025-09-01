@@ -1,11 +1,14 @@
 # "res://Scripts/Autoload/aDB.gd"
 
-# This handles all connections to the game server db, if more than one game server is needed, then
-#	a db controller server that mainatins all the connections to the db isneeded, the game servers
-#	will have to run requests thru that controller, this will be done when I get to scaling and 
-#	migrate the DB autoload to connect to a db Controller server.
+# This handles all connections to the game server db, for more than one game server, that need to 
+#	request via tcp socket. If only one game server is needed then this autoload can reside there.
+# Reason: Ther are limited allowed connections to a DB, it is hard to know how many each game server
+#	is needed exactly so if you divide the db connection between servers then you get overlap or 
+#	unused connections and you need a predefined game server count, this does add some interface 
+#	overhead delay but it is easier to scale horizonatally and most game server transaction can be 
+#	queued so the delay affect it minimal.
 
-# NOTE - See the game_srvr_cfg.json, this examples db plain password is "secret" and is hashed with
+# NOTE - See the srvr_cfg.json, this examples db plain password is "secret" and is hashed with
 #	SHA512, not to	be confused with SHA512/224, SHA512/256, or SHA3-512, the MariaDB server user
 #	is configured using ED25519 plugin, see the included GameSrvrSetup.sql file for installation.
 # The MariaDB addon will except the SHA512 hash because in the steps for authetication via ed25519
@@ -15,17 +18,24 @@
 
 # Connection Pooling
 #	For a faster query we will hold a min connection pool to be ready, the pools will be refreshed
-#		on a given time
+#		on a given time, we might keep the minimal connections to the amount of game servers.
 #	We have a limited number of connection in the pool, so connections have to be ran in threads 
 #	or we will get blocking while the request is waiting for a db connection to free; even though 
 #	queries are fast we could get a race condition that arrives to a stalemate and locks the server.
 
+# For precision math use DECIMAL, banks use it to prevent the floating penny, you can do the math 
+# functions division and multiplication in the database to get precision.
 # DECIMCAL(M,D) lookup
-#	Storage 0 digits = 0 bytes, 1–2 = 1 byte, 3–4 = 2 bytes, 5–6 = 3 bytes, 7–9 = 4 bytes
-#	any more digits it is just a repeat, 11 digits = 9(4  bytes) + 1-2( 1 byte) = 5 bytes
-#	each side of the decimal point is stored separately, left side digits are is M - D,
-#	full bytes are recommended so each side should be 0,2,4,6, 9 or 9 + 2,4,6,9 ... digits 
-#	123456789012345.12 = Decimal(17,2) = 8 bytes, 1234.1234 = DECIMAL(8,4) = 4 bytes 
+#	Each side of the decimal point is stored separately, left side digits are is M - D.
+#	Storage digits 1–2 = 1 byte, 3–4 = 2 bytes, 5–6 = 3 bytes, 7–9 = 4 bytes
+#	Full bytes are recommended so each side should be 0,2,4,6, 9 digits, any more digits it is 
+#	just a repeat 9 + 2,4,6,9 ..., 
+#	15 digits = 9(4 bytes) + 6(3 byte) = 7 bytes, 2 digits (1 byte) = 1 byte, 
+#	15 left, 2 right = 17 DECIMAL(17,2) 8 bytes.
+#	
+#	15:2, 123456789012345.12 = Decimal(17,2) = 8 bytes
+#	13:4, 1234567890123.1234 = DECICAL(17,4) = 8 bytes 
+#	4:4, 1234.1234 = DECIMAL(8,4) = 4 bytes 
 extends Node
 
 signal sDbConnsChanged
@@ -35,19 +45,14 @@ enum StmtTypes {
 	SELECT
 }
 enum StmtIDs {
-	SELECT_PLAYER_BY_ID,
 	INSERT_OR_UPDATE_PLYR,
-	UPDATE_PLAYER,
+	SELECT_PLAYER_BY_ID,
 	INSERT_MSG_BLOCKED_PLYR,
 	DELETE_MSG_BLOCKED_PLYR,
 	SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES,
-	INSERT_PLYR_INTO_MATCH,
-	DELETE_PLYR_FROM_MATCH,
-	SELECT_ALL_MATCHES,
-	SELECT_MATCHES_BY_PLYR_SIDE_TYPE,
-	SELECT_PLYR_INVENTORY,
+	#SELECT_PLYR_INVENTORY,
 	#UPDATE_PLYR_INVENTORY,
-	#DELETE_PLYR_INVENTORY
+	#DELETE_FROM_PLYR_INVENTORY
 }
 
 const kBufferConns: int = 10
@@ -55,13 +60,9 @@ const kDbConnTryMsec: int = 60000 # 1 min
 const kThreadLoopDelay: int = 17
 
 var prepared_statements: Dictionary = {
-	StmtIDs.SELECT_PLAYER_BY_ID: {
-		StmtTypes.SELECT: "SELECT * FROM player WHERE id = ?;"},
 	StmtIDs.INSERT_OR_UPDATE_PLYR: {
 		StmtTypes.COMMAND: "INSERT INTO player SET id=?, display_name=?, status=? " +
 		"ON DUPLICATE KEY UPDATE status=VALUES(status);" },
-	StmtIDs.UPDATE_PLAYER: {
-		StmtTypes.COMMAND: "UPDATE player SET status=?;"},
 	StmtIDs.INSERT_MSG_BLOCKED_PLYR: {
 		StmtTypes.COMMAND: "INSERT INTO msg_blocks (plyr_id, blocked_plyr_id) " +
 			"SELECT ?, id " +
@@ -78,21 +79,6 @@ var prepared_statements: Dictionary = {
 			"FROM msg_blocks mb " +
 			"JOIN player p ON p.id = mb.blocked_plyr_id " +
 			"WHERE mb.plyr_id=?;"},
-	StmtIDs.INSERT_PLYR_INTO_MATCH: {
-		StmtTypes.COMMAND: "INSERT INTO awaiting_match SET plyr_id=?, side=?, match_type=?;" },
-	StmtIDs.DELETE_PLYR_FROM_MATCH: {
-		StmtTypes.COMMAND: "DELETE FROM awaiting_match WHERE plyr_id=?;" },
-	StmtIDs.SELECT_ALL_MATCHES: {
-		StmtTypes.SELECT: "SELECT * FROM awaiting_match " +
-			"ORDER BY dt ASC;" }, 
-	StmtIDs.SELECT_MATCHES_BY_PLYR_SIDE_TYPE: {
-		StmtTypes.SELECT: 
-			"SELECT * FROM awaiting_match " +
-			"WHERE plyr_id != ? " + 
-				"AND match_type IN (?, ?) " +
-				"AND side IN (?, ?, ?) " +
-			"ORDER BY dt ASC, match_type ASC, side ASC;"
-	}, 
 	# COMMENTED OUT, still working on item schema, so this breaks on adding prepared stmts
 	#StmtIDs.SELECT_PLYR_INVENTORY: {
 		#StmtTypes.SELECT:
