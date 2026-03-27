@@ -8,10 +8,18 @@ const kServerName: String = "TCP Server"
 const kJsonCfgFile: String = "srvr_cfg.json"
 const kUpdateTime: float = 10.0
 const kCfgJsonKeys: Array = [
-	"listed_port",
+	"listen_port",
 	"bind_address", # Bind Address is * (all), if multiple servers will be connecting.
 	"max_conns",
 	"conn_timeout",
+	"db_conn_timeout",
+	"db_buffer_conns",
+	"db_url",
+	"db_max_conns",
+	"db_name",
+	"db_port",
+	"db_user",
+	"db_pwd_sha512_to_b64"
 ]
 
 var exe_dir: String

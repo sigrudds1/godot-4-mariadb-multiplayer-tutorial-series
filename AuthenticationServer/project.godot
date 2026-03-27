@@ -13,7 +13,7 @@ config_version=5
 config/name="Multiplayer Tutorial Authentication Server"
 config/tags=PackedStringArray("multiplayer", "tutorial")
 run/main_scene="uid://dinunw68qfhny"
-config/features=PackedStringArray("4.4", "Forward Plus")
+config/features=PackedStringArray("4.5", "Forward Plus")
 run/flush_stdout_on_print=true
 config/icon="res://icon.svg"
 

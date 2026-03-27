@@ -1,6 +1,6 @@
 # "res://Scripts/Autoload/aDB.gd"
 
-# This handles all connections to the game server db, for more than one game server, that need to 
+# This handles all connections to the game server db, for more than one game server they need to 
 #	request via tcp socket. If only one game server is needed then this autoload can reside there.
 # Reason: Ther are limited allowed connections to a DB, it is hard to know how many each game server
 #	is needed exactly so if you divide the db connection between servers then you get overlap or 
@@ -16,7 +16,7 @@
 #	hashing SHA512, so with the is_prehashed set as true the first hashing is skipped and a safer,
 #	sha512, storage of the password can be kept in a cfg.
 
-# Connection Pooling
+# DB Connection Pooling
 #	For a faster query we will hold a min connection pool to be ready, the pools will be refreshed
 #		on a given time, we might keep the minimal connections to the amount of game servers.
 #	We have a limited number of connection in the pool, so connections have to be ran in threads 
@@ -24,7 +24,7 @@
 #	queries are fast we could get a race condition that arrives to a stalemate and locks the server.
 
 # For precision math use DECIMAL, banks use it to prevent the floating penny, you can do the math 
-# functions division and multiplication in the database to get precision.
+# 	functions division and multiplication in the database to get precision.
 # DECIMCAL(M,D) lookup
 #	Each side of the decimal point is stored separately, left side digits are is M - D.
 #	Storage digits 1–2 = 1 byte, 3–4 = 2 bytes, 5–6 = 3 bytes, 7–9 = 4 bytes
@@ -33,8 +33,8 @@
 #	15 digits = 9(4 bytes) + 6(3 byte) = 7 bytes, 2 digits (1 byte) = 1 byte, 
 #	15 left, 2 right = 17 DECIMAL(17,2) 8 bytes.
 #	
-#	15:2, 123456789012345.12 = Decimal(17,2) = 8 bytes
-#	13:4, 1234567890123.1234 = DECICAL(17,4) = 8 bytes 
+#	15:2, 123456789012345.12 = DECIMAL(17,2) = 8 bytes
+#	13:4, 1234567890123.1234 = DECIMAL(17,4) = 8 bytes 
 #	4:4, 1234.1234 = DECIMAL(8,4) = 4 bytes 
 extends Node
 
@@ -44,6 +44,7 @@ enum StmtTypes {
 	COMMAND = 1,
 	SELECT
 }
+
 enum StmtIDs {
 	INSERT_OR_UPDATE_PLYR,
 	SELECT_PLAYER_BY_ID,
@@ -156,6 +157,7 @@ func do_threaded_task(p_task: DbTask, p_thread: Thread) -> void:
 	else:
 		db_conn.do_task_release(p_task)
 		db_conn = null
+
 
 func get_db_conn() -> DbConn:
 	if not _srvr_running or _srvr_change_cfg: return null
@@ -281,6 +283,6 @@ func _test_game_db() -> void:
 	var params: Array[Dictionary] = [{MariaDBConnector.FT_INT_U: 1}]
 	var _res: Array[Dictionary] = db_conn.prep_stmt_exec_select(stmt_id, params)
 	if db_conn.last_error == MariaDBConnector.ErrorCode.OK:
-		print("DB OK for %s test" % [_db_ctx.db_name])
+		print("DB %s test OK" % [_db_ctx.db_name])
 	else:
-		print("DB ERROR: %d for %s test", [db_conn.last_error, _db_ctx.db_name])
+		print("DB %s test ERROR: %d", [_db_ctx.db_name, db_conn.last_error])

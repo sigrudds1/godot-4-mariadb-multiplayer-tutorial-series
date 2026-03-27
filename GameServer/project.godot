@@ -13,17 +13,16 @@ config_version=5
 config/name="Multiplayer Tutorial Game Server"
 config/tags=PackedStringArray("multiplayer", "tutorial")
 run/main_scene="res://Main.tscn"
-config/features=PackedStringArray("4.4", "Forward Plus")
+config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 Sanitize="*res://Scripts/Autoload/aSanitize.gd"
 DataTypes="*res://Scripts/Autoload/aDataTypes.gd"
-CFG="*res://Scripts/Autoload/aCFG.gd"
+Cfg="*res://Scripts/Autoload/aCfg.gd"
 TimeLapse="*res://Scripts/Autoload/aTimeLapse.gd"
-DB="*res://Scripts/Autoload/aDB.gd"
-BackendServer="*res://Scripts/Autoload/Servers/aBackendServer.gd"
+ControllerBus="*res://Scripts/Autoload/aControllerBus.gd"
 ConnectionIface="*res://Scripts/Autoload/RPC/aConnectionIface.gd"
 InventoryIface="*res://Scripts/Autoload/RPC/aInventoryIface.gd"
 MessagingIface="*res://Scripts/Autoload/RPC/aMessagingIface.gd"

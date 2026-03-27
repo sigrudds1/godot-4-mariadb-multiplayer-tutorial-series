@@ -1,5 +1,5 @@
 {
-	"port": 62000,
+	"listen_port": 62000,
 	"bind_address": "*",
 	"max_conns": 50,
 	"conn_timeout": 2000,

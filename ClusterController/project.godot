@@ -12,7 +12,8 @@ config_version=5
 
 config/name="Multiplayer Tutorial Cluster Controller"
 config/tags=PackedStringArray("multiplayer", "tutorial")
-config/features=PackedStringArray("4.4", "Forward Plus")
+run/main_scene="uid://cnxw3sw2uhx58"
+config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]

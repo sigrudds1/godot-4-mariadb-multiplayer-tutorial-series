@@ -1,0 +1,5 @@
+{
+  "godotTools.editorPath.godot4": "/home/sigrud/dev/GodotEngine-Builds/Godot_v4.5-stable_linux.x86_64",
+  "godotTools.lsp.headless": true,         // we're launching our own headless servers
+  "godotTools.lsp.serverPort": 6010         // unique per project (6011, 6012, …)
+}

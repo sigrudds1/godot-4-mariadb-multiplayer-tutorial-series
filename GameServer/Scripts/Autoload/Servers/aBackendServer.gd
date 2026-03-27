@@ -27,7 +27,7 @@ var _bind_address: String
 
 
 func _ready() -> void:
-	if CFG.sCfgChanged.connect(_change_cfg):
+	if Cfg.sCfgChanged.connect(_change_cfg):
 		pass
 
 
@@ -43,13 +43,13 @@ func _process(_delta: float) -> void:
 
 func _change_cfg() -> void:
 	_stop_listening = true
-	var base_port: int = CFG.data.get("backend_base_port")
+	var base_port: int = Cfg.data.get("backend_base_port")
 	if base_port == null or base_port < 1024:
 		printerr("bad backend listen port:", base_port)
 		return
 	
-	_tcp_listen_port = base_port + CFG.server_id
-	_bind_address = CFG.data.get("backend_bind_address")
+	_tcp_listen_port = base_port + Cfg.server_id
+	_bind_address = Cfg.data.get("backend_bind_address")
 	if _bind_address == null or _bind_address == "":
 		_bind_address = "*"
 	
@@ -120,14 +120,14 @@ func _tcp_thread(p_tcp_peer: StreamPeerTCP, p_this_thread: Thread) -> void:
 	
 	var avail_bytes: int = 0
 	var idle_tm: int = Time.get_ticks_msec() + _tcp_conn_timeout
-	while NetTool.tcp_is_conn(p_tcp_peer) and Time.get_ticks_msec() < idle_tm and avail_bytes < 4:
+	while NetTool.tcp_is_connected(p_tcp_peer) and Time.get_ticks_msec() < idle_tm and avail_bytes < 4:
 		avail_bytes = p_tcp_peer.get_available_bytes()
 		if avail_bytes < 2: # need 4 bytes min
 			# Only call inside a thread or it will block main thread, use await inside main thread
 			OS.delay_msec(kTcpFlushDelay)
 			continue
 	
-	if NetTool.tcp_is_conn(p_tcp_peer) and avail_bytes > 1:
+	if NetTool.tcp_is_connected(p_tcp_peer) and avail_bytes > 1:
 		var func_code: int = p_tcp_peer.get_u16()
 		#print("Backend._tcp_thread func_code:", func_code)
 		# FuncCode dispatching, faster than if-elif and match tree

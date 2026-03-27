@@ -30,11 +30,13 @@ var _msg_blocked_plyrs: PackedStringArray = []
 func _ready() -> void:
 	if MessagingIface.sPlayerSentMsg.connect(_send_msg) != OK: pass # TODO handle error
 	
-	if TimeLapse.sOneMinuteLapsed.connect(_update_db) != OK: pass # TODO handle error
+	#if TimeLapse.sOneMinuteLapsed.connect(_update_db) != OK: pass # TODO handle error
 	
-	var thr: Thread = Thread.new()
-	var err_code: Error = thr.start(_update_db_thread_func.bind(thr, UpdateStates.CONNECT))
-	if err_code != OK: printerr("player _update_thread start error code:" + str(err_code))
+	_update_plyr_status()
+	
+	#var thr: Thread = Thread.new()
+	#var err_code: Error = thr.start(_update_db_thread_func.bind(thr, UpdateStates.CONNECT))
+	#if err_code != OK: printerr("player _update_thread start error code:" + str(err_code))
 
 
 func add_msg_blocked_plyr(p_plyr_dname: String) -> void:
@@ -52,24 +54,26 @@ func remove_msg_blocked_plyr(p_plyr_dname: String) -> void:
 
 # You may be asking why not queue_free from outside and _exit_tree instead
 # Thread can't be started once the Node is flagged for deletion and DB functions have to be threaded
-func remove_player(p_thread: Thread) -> void:
+func remove_player(p_this_thread: Thread) -> void:
 	_connection_state = ConnectionStates.OFFLINE
-	_update_db_thread_func(p_thread, UpdateStates.DISCONNECT)
+	#_update_db_thread_func(p_thread, UpdateStates.DISCONNECT)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
 	queue_free() 
 
 
-func _fetch_db_blocked_plyrs(p_thread: Thread) -> Array[Dictionary]:
-	var qr: QueryResult = QueryResult.new()
-	if p_thread != null:
-		var stmt_id: DB.StmtIDs = DB.StmtIDs.SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES
-		var sql_params: Array[Dictionary] = [{MariaDBConnector.FT_INT_U: plyr_id}]
-		var task: DbTask = DbTask.new(stmt_id, sql_params, qr)
-		
-		DB.do_threaded_task(task, p_thread)
-		if qr.error != MariaDBConnector.ErrorCode.OK:
-			printerr("Players._fetch_db_blocked_plyrs db error:", qr.error)
-	
-	return qr.select_res
+func _fetch_db_blocked_plyrs_thr_func(p_this_thread: Thread) -> void:
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
+	#var qr: QueryResult = QueryResult.new()
+	#if p_thread != null:
+		#var stmt_id: DB.StmtIDs = DB.StmtIDs.SELECT_MSG_BLOCKED_BY_DISPLAY_NAMES
+		#var sql_params: Array[Dictionary] = [{MariaDBConnector.FT_INT_U: plyr_id}]
+		#var task: DbTask = DbTask.new(stmt_id, sql_params, qr)
+		#
+		#DB.do_threaded_task(task, p_thread)
+		#if qr.error != MariaDBConnector.ErrorCode.OK:
+			#printerr("Players._fetch_db_blocked_plyrs db error:", qr.error)
+	#
+	#return qr.select_res
 
 
 func _fetch_db_inventory(_thread: Thread) -> void:
@@ -83,24 +87,51 @@ func _send_msg(p_from_plyr: String, p_msg: String) -> void:
 	MessagingIface.srvr_send_msg.rpc_id(peer_id, p_from_plyr, p_msg)
 
 
-func _update_blocked_plyr_list(p_thread: Thread) -> void:
-	_msg_blocked_plyrs.clear()
-	var blocked_plyr_rows: Array[Dictionary] = _fetch_db_blocked_plyrs(p_thread)
-	for row: Dictionary in blocked_plyr_rows:
-		var blocked: String = row.get("display_name")
-		if blocked != null and _msg_blocked_plyrs.find(blocked) == -1:
-			if _db_msg_blocked_plyrs.push_back(blocked): pass
-		else:
-			printerr("Player._get_msg_block null value or duplicate in rows:", blocked_plyr_rows)
-	
-	_msg_blocked_plyrs = _db_msg_blocked_plyrs.duplicate() # must duplicate arrays are passed by ref
-	MessagingIface.srvr_send_blocked_players.rpc_id.call_deferred(peer_id, _msg_blocked_plyrs)
-
-
-func _update_db() -> void:
+func _update_blocked_plyr_list(p_data: PackedByteArray = []) -> void:
 	var thr: Thread = Thread.new()
-	var err_code: Error = thr.start(_update_db_thread_func.bind(thr, UpdateStates.UPDATE))
-	if err_code != OK: printerr("player _update_db_thread_func start error code:" + str(err_code))
+	var err_code: Error = thr.start(_update_blocked_plyr_list_thr_func.bind(thr, p_data))
+	if err_code != OK:
+		printerr("player _update_plyr_status_thr_func start error code:" + str(err_code))
+
+
+func _update_blocked_plyr_list_callback(p_error_code: int, p_data: PackedByteArray) -> void:
+	if p_error_code != OK:
+		_update_blocked_plyr_list()
+	else:
+		_update_blocked_plyr_list(p_data)
+
+
+
+func _update_blocked_plyr_list_thr_func(p_this_thread: Thread, p_data: PackedByteArray) -> void:
+	if p_data.is_empty():
+		pass
+	else:
+		var spb: StreamPeerBuffer = StreamPeerBuffer.new()
+		spb.set_data_array(p_data)
+		spb.seek(0)
+		var spb_size: int = spb.get_size()
+		print(spb.get_size())
+		while spb.get_position() < spb_size:
+			print(spb.get_position())
+			print(spb.get_utf8_string())
+	#_msg_blocked_plyrs.clear()
+	#var blocked_plyr_rows: Array[Dictionary] = _fetch_db_blocked_plyrs(p_thread)
+	#for row: Dictionary in blocked_plyr_rows:
+		#var blocked: String = row.get("display_name")
+		#if blocked != null and _msg_blocked_plyrs.find(blocked) == -1:
+			#if _db_msg_blocked_plyrs.push_back(blocked): pass
+		#else:
+			#printerr("Player._get_msg_block null value or duplicate in rows:", blocked_plyr_rows)
+	#
+	#_msg_blocked_plyrs = _db_msg_blocked_plyrs.duplicate() # must duplicate arrays are passed by ref
+	#MessagingIface.srvr_send_blocked_players.rpc_id.call_deferred(peer_id, _msg_blocked_plyrs)
+	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
+
+
+#func _update_db() -> void:
+	#var thr: Thread = Thread.new()
+	#var err_code: Error = thr.start(_update_db_thread_func.bind(thr, UpdateStates.UPDATE))
+	#if err_code != OK: printerr("player _update_db_thread_func start error code:" + str(err_code))
 
 
 func _update_db_blocked_plyrs(p_thread: Thread) -> void:
@@ -127,65 +158,78 @@ func _update_db_blocked_plyrs(p_thread: Thread) -> void:
 	
 	if db_del_params_list.size() == 0 and db_insert_params_list.size() == 0: return
 	
-	var qr: QueryResult = QueryResult.new()
-	var task: DbTask = DbTask.new(DB.StmtIDs.DELETE_MSG_BLOCKED_PLYR, [], qr)
-	var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
-	var db_conn: DbConn = DB.get_db_conn()
-	while db_conn == null and Time.get_ticks_msec() < timeout_msec:
-		# Only call inside a thread or it will block main thread, use await inside main thread
-		OS.delay_msec(DB.kThreadLoopDelay) 
-		db_conn = DB.get_db_conn()
+	#var qr: QueryResult = QueryResult.new()
+	#var task: DbTask = DbTask.new(DB.StmtIDs.DELETE_MSG_BLOCKED_PLYR, [], qr)
+	#var timeout_msec: int = Time.get_ticks_msec() + DB.kDbConnTryMsec
+	#var db_conn: DbConn = DB.get_db_conn()
+	#while db_conn == null and Time.get_ticks_msec() < timeout_msec:
+		## Only call inside a thread or it will block main thread, use await inside main thread
+		#OS.delay_msec(DB.kThreadLoopDelay) 
+		#db_conn = DB.get_db_conn()
 	
-	if db_conn == null:
-		printerr("Player._update_db_blocked_plyrs cannot get DB connection")
-		return
+	#if db_conn == null:
+		#printerr("Player._update_db_blocked_plyrs cannot get DB connection")
+		#return
+	#
+	#for params: Array[Dictionary] in db_del_params_list:
+		#task.params = params
+		#db_conn.do_task_keep_issued(task)
+		#if qr.error != MariaDBConnector.ErrorCode.OK:
+			#printerr("Error processiong DELETE_MSG_BLOCKED_PLYR with params ", params)
+	#
+	#task.stmt_glb_id = DB.StmtIDs.INSERT_MSG_BLOCKED_PLYR
 	
-	for params: Array[Dictionary] in db_del_params_list:
-		task.params = params
-		db_conn.do_task_keep_issued(task)
-		if qr.error != MariaDBConnector.ErrorCode.OK:
-			printerr("Error processiong DELETE_MSG_BLOCKED_PLYR with params ", params)
-	
-	task.stmt_glb_id = DB.StmtIDs.INSERT_MSG_BLOCKED_PLYR
-	
-	for params: Array[Dictionary] in db_insert_params_list:
-		task.params = params
-		db_conn.do_task_keep_issued(task)
-		if qr.error != MariaDBConnector.ErrorCode.OK:
-			printerr("Error processiong INSERT_MSG_BLOCKED_PLYR with params ", params)
-	
-	db_conn.issued = false
-	db_conn = null
+	#for params: Array[Dictionary] in db_insert_params_list:
+		#task.params = params
+		#db_conn.do_task_keep_issued(task)
+		#if qr.error != MariaDBConnector.ErrorCode.OK:
+			#printerr("Error processiong INSERT_MSG_BLOCKED_PLYR with params ", params)
+	#
+	#db_conn.issued = false
+	#db_conn = null
 
 
 func _update_db_inventory(_thread: Thread) -> void: 
 	pass
 
 
-func _update_db_thread_func(p_this_thread: Thread, p_update_state: UpdateStates) -> void:
-	if p_update_state != UpdateStates.UPDATE: _update_plyr_status(p_this_thread)
+#func _update_db_thread_func(p_this_thread: Thread, p_update_state: UpdateStates) -> void:
+	#if p_update_state == UpdateStates.CONNECT:
+		#_update_blocked_plyr_list(p_this_thread)
+		#_fetch_db_inventory(p_this_thread)
+	#else:
+		#_update_db_blocked_plyrs(p_this_thread)
+		#_update_db_inventory(p_this_thread)
+	#
+	#Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
+
+
+func _update_plyr_status() -> void:
+	var thr: Thread = Thread.new()
+	var err_code: Error = thr.start(_update_plyr_status_thr_func.bind(thr))
+	if err_code != OK:
+		printerr("player _update_plyr_status_thr_func start error code:" + str(err_code))
+
+
+func _update_plyr_status_callback(
+	p_error_code: int,
+	_data: StreamPeerBuffer = StreamPeerBuffer.new()
+) -> void:
+	if p_error_code == OK:
+		return
 	
-	if p_update_state == UpdateStates.CONNECT:
-		_update_blocked_plyr_list(p_this_thread)
-		_fetch_db_inventory(p_this_thread)
-	else:
-		_update_db_blocked_plyrs(p_this_thread)
-		_update_db_inventory(p_this_thread)
-	
+	print("Error updating plyr status code:", p_error_code)
+	_update_plyr_status()
+
+
+func _update_plyr_status_thr_func(p_this_thread: Thread) -> void:
+	if p_this_thread == null: return
+	while not ControllerBus.add_db_job(
+		ControllerBus.BussFuncCodes.DB_INSERT_OR_UPDATE_PLYR,
+		self.name + "_update_plyr_status",
+		[plyr_id, display_name, _connection_state],
+		_update_plyr_status_callback
+	):
+		OS.delay_msec(17)
+
 	Callable(Utils, "thread_wait_stop").call_deferred(p_this_thread)
-
-
-func _update_plyr_status(p_thread: Thread) -> void:
-	if p_thread == null: return
-	
-	var stmt_id: DB.StmtIDs = DB.StmtIDs.INSERT_OR_UPDATE_PLYR
-	var sql_params: Array[Dictionary] = [
-		{MariaDBConnector.FT_INT_U: plyr_id},
-		{MariaDBConnector.FT_VARCHAR: display_name},
-		{MariaDBConnector.FT_TINYINT_U: _connection_state}
-	]
-	var qr: QueryResult = QueryResult.new()
-	var task: DbTask =  DbTask.new(stmt_id, sql_params, qr)
-	DB.do_threaded_task(task, p_thread)
-	
-	if qr.error != MariaDBConnector.ErrorCode.OK: printerr("INSERT_OR_UPDATE_PLYR error:", qr.error)

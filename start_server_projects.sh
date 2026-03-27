@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-
 #script for launching the various game cluster servers
+# We sue screen so we can go intot he terminal and see the output.
+set -euo pipefail
+
 error=0
 srvr_name=$2
 
@@ -11,29 +13,35 @@ CUR_DIR=$(pwd)
 help() {
 	echo "Usage:"
 	echo "start_servers_projects.sh help"
-	echo "start_servers_projects.sh start {authsrvr|gmsrvr|gwsrvr}"
-	echo "start_servers_projects.sh stop {authsrvr|gmsrvr|gwsrvr}"
-	echo "start_servers_projects.sh restart {authsrvr|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh start {authsrvr|cluster|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh stop {authsrvr|cluster|gmsrvr|gwsrvr}"
+	echo "start_servers_projects.sh restart {authsrvr|cluster|gmsrvr|gwsrvr}"
 	echo "start_servers_projects.sh {startall|stopall|restartall}"
 }
+
+
 
 start(){
 	case "$srvr_name" in
 		authsrvr)
 			echo "Starting Authentication Server"
-			
 			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/AuthenticationServer
 			screen -dmS authsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
-		gmsrvr)
-			echo "Starting Game Server"
-			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/GameServer
-			screen -dmS gmsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
+		cluster)
+			echo "Starting Cluster Server"
+			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/ClusterController
+			screen -dmS cluster bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
 		gwsrvr)
 			echo "Starting Gateway Server"
 			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/GatewayServer
 			screen -dmS gwsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
+			;;
+		gmsrvr)
+			echo "Starting Game Server"
+			cd ~/dev/repos/Godot4Projects/godot-4-mariadb-multiplayer-tutorial-series/GameServer
+			screen -dmS gmsrvr bash -c "$GODOT_BIN --headless --path ./; exec bash"
 			;;
 		*)
 			error=1
@@ -43,7 +51,7 @@ start(){
 
 stop() {
     case "$srvr_name" in
-        authsrvr|gmsrvr|gwsrvr)
+        authsrvr|cluster|gmsrvr|gwsrvr)
             error=0
             ;;
         *)
@@ -82,14 +90,14 @@ case "$1" in
 		sleep 1
 		;;
 	startall)
-       for session_name in authsrvr gwsrvr gmsrvr; do
+       for session_name in authsrvr cluster gmsrvr gwsrvr; do
 			srvr_name=$session_name
 			start
 			sleep 1
 		done
 	    ;;
 	stopall)
-        for session_name in gwsrvr gmsrvr authsrvr; do
+        for session_name in gwsrvr gmsrvr cluster authsrvr; do
 			srvr_name=$session_name
 			stop
 			sleep 1
@@ -108,14 +116,14 @@ case "$1" in
 	#   fi
 	  	;;
 	restartall)
-        for session_name in gwsrvr gmsrvr authsrvr; do
+        for session_name in gwsrvr cluster gmsrvr authsrvr; do
 			srvr_name=$session_name
 			stop
 		done
 		
 		sleep 1
 		
-		for session_name in authsrvr gwsrvr gmsrvr; do
+		for session_name in authsrvr cluster gmsrvr gwsrvr; do
 			srvr_name=$session_name
 			start
 		done

@@ -16,7 +16,7 @@ var _stop_listening: bool = true
 
 
 func _ready() -> void:
-	if CFG.sCfgChanged.connect(_change_cfg) != OK: pass
+	if Cfg.sCfgChanged.connect(_change_cfg) != OK: pass
 	
 	if multiplayer.peer_connected.connect(_player_connected) != OK: pass
 	
@@ -28,19 +28,19 @@ func _ready() -> void:
 func _change_cfg() -> void:
 	_stop_listening = true
 	
-	if !CFG.data.has_all(CFG.kCfgJsonKeys):
+	if !Cfg.data.has_all(Cfg.kCfgJsonKeys):
 		printerr("aConnectionIface.gd:_change_cfg() missing keys")
 		await get_tree().create_timer(1.0).timeout
 		call_deferred("_change_cfg")
 		return
 	
-	var base_port: int = CFG.data.get("plyr_base_port")
+	var base_port: int = Cfg.data.get("plyr_base_port")
 	if base_port == null or base_port < 1024:
 		printerr("aConnectionIface.gd:_change_cfg() missing keys")
 		return
 	
-	_enet_port = base_port + CFG.server_id
-	_enet_max_conns = CFG.data.get("plyr_max_conns")
+	_enet_port = base_port + Cfg.server_id
+	_enet_max_conns = Cfg.data.get("plyr_max_conns")
 	if _enet_max_conns == null or _enet_max_conns == 0:
 		printerr("aConnectionIface.gd:_change_cfg() _enet_max_conns:", _enet_max_conns)
 		return

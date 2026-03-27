@@ -1,4 +1,4 @@
-# "res://Scripts/Autoload/Servers/aCFG.gd"
+# "res://Scripts/Autoload/Servers/aCfg.gd"
 extends Node
 
 signal sCfgChanged
@@ -12,6 +12,8 @@ const kCfgJsonKeys: Array = [
 	"backend_bind_address",
 	"backend_max_conns",
 	"backend_conn_timeout",
+	"controller_url",
+	"controller_port",
 	"db_conn_timeout",
 	"db_buffer_conns",
 	"db_url",
@@ -29,12 +31,21 @@ const kCfgJsonKeys: Array = [
 
 var exe_dir: String
 var data: Dictionary = {}
+
 var server_id: int = 1
+var controller_url: String
+var controller_port: int
+var plyr_port: int
+var plyr_max_conns: int
+var plyr_conn_timeout: int
+
 
 var _update_tmr: float = kUpdateTime
 
 # We will eventually set ip and port in command args, when multiple servers are needed
 func _ready() -> void:
+	if sCfgChanged.connect(_update_cfg) != OK: pass
+	
 	var args: Dictionary = {}
 	print("Command line args:", OS.get_cmdline_user_args())
 	
@@ -69,3 +80,8 @@ func _get_cfg() -> void:
 	if !data.has_all(kCfgJsonKeys):
 		print(kServerName, " Cfg Missing, QUITTING!")
 		get_tree().quit(-1)
+
+
+func _update_cfg() -> void:
+	controller_url = data["controller_url"]
+	controller_port = data["controller_port"]

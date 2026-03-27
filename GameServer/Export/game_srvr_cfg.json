@@ -3,6 +3,8 @@
 	"backend_bind_address": "127.0.0.1",
 	"backend_max_conns": 5,
 	"backend_conn_timeout": 2000,
+	"controller_url": "127.0.0.1",
+	"controller_port": 62000,
 	"db_conn_timeout": 2000,
 	"db_buffer_conns": 2,
 	"db_url": "127.0.0.1",
